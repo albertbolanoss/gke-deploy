@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: redis-config
+  labels:
+    app: redis
+
+data:
+  redis.conf: |
+    bind 0.0.0.0
+    protected-mode no
+    maxmemory {{ .Values.config.maxmemory }}
+    maxclients {{ .Values.config.maxclients }}
+    appendonly {{ .Values.config.appendonly }}
+    requirepass "password"

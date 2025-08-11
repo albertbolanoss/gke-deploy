@@ -41,12 +41,21 @@ tasks.named('test') {
 	useJUnitPlatform()
 }
 
+test {
+	useJUnitPlatform()
+	finalizedBy jacocoTestReport
+}
 jacocoTestReport {
+	dependsOn test
+}
+
+jacocoTestReport {
+	dependsOn test
 	reports {
 		xml.required = true
-		xml.outputLocation = file("${buildDir}/reports/jacoco/test/jacocoTestReport.xml")
+		html.required = true
+		csv.required = false
 	}
-	dependsOn test
 }
 
 tasks.register('copyJarToDocker', Copy) {

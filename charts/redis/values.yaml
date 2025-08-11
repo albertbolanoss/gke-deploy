@@ -1,0 +1,13 @@
+image:
+  repository: redis
+  tag: 7.2
+  pullPolicy: IfNotPresent
+
+service:
+  port: 6379
+
+config:
+  maxmemory: "256mb"
+  maxclients: "100"
+  appendonly: "yes"
+  password: "password"  # Use a secure password or manage via Secret in prod

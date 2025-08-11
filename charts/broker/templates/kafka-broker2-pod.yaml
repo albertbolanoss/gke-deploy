@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ .Values.broker.name }}
+  labels:
+    app: kafka-broker2
+spec:
+  containers:
+    - name: kafka
+      image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+      ports:
+        - containerPort: {{ .Values.broker.clientPort }}
+        - containerPort: {{ .Values.broker.controllerPort }}
+      env:
+        - name: KAFKA_KRAFT_MODE
+          value: "true"
+      resources:
+        requests:
+          memory: "512Mi"
+          cpu: "250m"
+        limits:
+          memory: "1Gi"
+          cpu: "500m"
+      volumeMounts:
+        - name: kafka-config
+          mountPath: /opt/bitnami/kafka/config/server.properties
+          subPath: server.properties
+  volumes:
+    - name: kafka-config
+      configMap:
+        name: kafka-config
