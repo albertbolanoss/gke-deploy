@@ -2,10 +2,11 @@ plugins {
 	id 'java'
 	id 'org.springframework.boot' version '3.3.2'
 	id 'io.spring.dependency-management' version '1.1.7'
+	id 'jacoco'
 }
 
 group = 'com.labs'
-version = '0.0.1-SNAPSHOT'
+version = ''
 
 java {
 	toolchain {
@@ -39,3 +40,26 @@ tasks.named('bootBuildImage') {
 tasks.named('test') {
 	useJUnitPlatform()
 }
+
+jacocoTestReport {
+	reports {
+		xml.required = true
+		xml.outputLocation = file("${buildDir}/reports/jacoco/test/jacocoTestReport.xml")
+	}
+	dependsOn test
+}
+
+tasks.register('copyJarToDocker', Copy) {
+	dependsOn bootJar
+
+	from "$buildDir/libs"
+	include "gke_deploy.jar"
+
+	into "$rootDir/docker"
+
+	rename { fileName ->
+		'gke_deploy.jar'
+	}
+}
+
+build.finalizedBy('copyJarToDocker')

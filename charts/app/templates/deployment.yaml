@@ -1,0 +1,164 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "cah-helmchart-base.buildName" (list . "deploy") }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "cah-helmchart-base.labels" . | nindent 4 }}
+      {{- include "cah-helmchart-base.workload-labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "cah-helmchart-base.selector-labels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "cah-helmchart-base.selector-labels" . | nindent 8 }}
+          {{- include "cah-helmchart-base.workload-labels" . | nindent 8 }}
+    spec:
+      securityContext:
+        {{- toYaml .Values.securityContext | nindent 8 }}
+      containers:
+        - name: {{ .Values.metadata.name }}
+          ports:
+            - containerPort: {{ .Values.service.targetPort }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "cah-helmchart-base.buildName" (list . "envcfg") }}
+          env:
+            - name: KAFKA_JAAS_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "cah-helmchart-base.buildName" (list . "secsa") }}
+                  key: KAFKA_JAAS_USERNAME
+            - name: KAFKA_JAAS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "cah-helmchart-base.buildName" (list . "secsa") }}
+                  key: KAFKA_JAAS_PASSWORD
+            - name: KAFKA_AUTH_USER_INFO
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "cah-helmchart-base.buildName" (list . "secsa") }}
+                  key: KAFKA_AUTH_USER_INFO
+            - name: KAFKA_AUTH_CREDENTIALS_SOURCE
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "cah-helmchart-base.buildName" (list . "secsa") }}
+                  key: KAFKA_AUTH_CREDENTIALS_SOURCE
+            - name: PUBLISHER_REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "cah-helmchart-base.buildName" (list . "secsa") }}
+                  key: PUBLISHER_REDIS_PASSWORD
+          securityContext:
+            {{- toYaml .Values.podSecurityContext | nindent 12 }}
+          volumeMounts:
+            - name: env-vars-volume
+              mountPath: "/sbin/envVars"
+              readOnly: true
+            - name: splunk-logs
+              mountPath: /var/log
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.livenessProbe.path }}
+              port: {{ .Values.service.targetPort }}
+            initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.livenessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.livenessProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.livenessProbe.failureThreshold }}
+            successThreshold: {{ .Values.livenessProbe.successThreshold }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.readinessProbe.path }}
+              port: {{ .Values.service.targetPort }}
+            initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.readinessProbe.failureThreshold }}
+            successThreshold: {{ .Values.readinessProbe.successThreshold }}
+        - name: splunk-uf
+          image: "{{ .Values.splunk.repository }}:{{ .Values.splunk.tag }}"
+          imagePullPolicy: {{ .Values.splunk.pullPolicy }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "cah-helmchart-base.buildName" (list . "spkcfg") }}
+          {{- with .Values.splunk.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          command:
+            - /bin/bash
+            - -c
+            - |
+              set -e
+              date
+              
+              SPLUNK_ENV_PATH="/sbin/envVars/splunk.env"
+              echo $SPLUNK_ENV_PATH
+              
+              max_wait=30
+              waited=0
+              
+              while [ ! -f "$SPLUNK_ENV_PATH" ] && [ $waited -lt $max_wait ]; do
+                sleep 1
+                waited=$((waited + 1))
+                echo "waiting"
+              done
+              
+              if [ -f "$SPLUNK_ENV_PATH" ]; then
+                echo "Sanitizing $SPLUNK_ENV_PATH"
+                tr -d '\r' < "$SPLUNK_ENV_PATH" > "/tmp/cleaned_splunk.env"
+                SPLUNK_ENV_PATH="/tmp/cleaned_splunk.env"
+              
+                echo "Loading environment variables from $SPLUNK_ENV_PATH"
+                set -a
+                . "$SPLUNK_ENV_PATH"
+                set +a
+              else
+                echo "ERROR: $SPLUNK_ENV_PATH not found after $max_wait seconds."
+                exit 1
+              fi
+              
+              echo "Starting Splunk Forwarder"
+              exec /sbin/entrypoint.sh start
+          volumeMounts:
+            - name: env-splunk-volume
+              mountPath: "/sbin/envVars"
+              readOnly: true
+            - name: splunk-logs
+              mountPath: /var/log
+      volumes:
+        - name: env-vars-volume
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: {{ include "cah-helmchart-base.buildName" (list . "envsp") }}
+        - name: env-splunk-volume
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: {{ include "cah-helmchart-base.buildName" (list . "spksp") }}
+        - name: splunk-logs
+          emptyDir: { }
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    {{- with .Values.affinity }}
+    affinity:
+      {{- toYaml . | nindent 8 }}
+    {{- end }}
+    {{- with .Values.tolerations }}
+    tolerations:
+      {{- toYaml . | nindent 8 }}
+    {{- end }}

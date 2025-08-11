@@ -1,0 +1,106 @@
+# Default values for cah-helmchart-base.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+# Note the commented properties have a default value by environment if specify a value here, it set up this value for all environments
+environment: "dev"
+
+replicaCount: 6
+
+metadata:
+  namePrefix: "ecomm-nxtgen-kafka"
+  name: "coveo-repartitioner"
+  defaultNamespace: "ecomm-nxtgen-kafka"
+
+image:
+  repository: harbor.dev1.cardinalhealth.net/ecomm-nxtgen/ecomm-nxtgen-kafka-pd-coveo-repartitioner-gke
+  tag: 0.0.6
+  pullPolicy: Always
+
+secretManager:
+  envsVars: "projects/363147481374/secrets/searchindexer-dev/versions/latest"
+  splunk: "projects/363147481374/secrets/splunk-dev/versions/latest"
+
+resources:
+  requests:
+    cpu: "500m"
+    memory: "512Mi"
+  limits:
+    cpu: 2
+    memory: "3Gi"
+
+splunk:
+  repository: harbor.dev1.cardinalhealth.net/docker-hub-proxy/splunk/universalforwarder
+  tag: 9.3.3
+  pullPolicy: IfNotPresent
+  resources:
+    requests:
+      cpu: "400m"
+      memory: "256Mi"
+    limits:
+      cpu: 1
+      memory: "512Mi"
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 9081
+
+livenessProbe:
+  path: /actuator/health
+  port: 9081
+  initialDelaySeconds: 60
+  periodSeconds: 20
+  timeoutSeconds: 2
+  failureThreshold: 3
+  successThreshold: 1
+
+readinessProbe:
+  path: /actuator/health
+  port: 9081
+  initialDelaySeconds: 30
+  periodSeconds: 20
+  timeoutSeconds: 2
+  failureThreshold: 3
+  successThreshold: 1
+
+envs:
+  pricingFilterEnabled: "true"
+  refinedProductTopicEnabled: "true"
+  pricingEligibilityTopicEnabled: "true"
+  productScanTopicEnabled: "true"
+  ednaTopicEnabled: "true"
+  stockStatusTopicEnabled: "true"
+  productInclusionTopicEnabled: "true"
+  taxonomyTopicEnabled: "true"
+  nonReturnableTopicEnabled: "true"
+  customerAccountTopicEnabled: "true"
+  rocksdbMaxSpace: "3221225472"
+  kafkaBootstrapServers: "lkc-1jr5dz-61m326.us-central1.gcp.glb.confluent.cloud:9092"
+  kafkaApplicationId: "vantus_phm_pd_coveo_repartitioner_gke"
+  kafkaStreamState: ".local-storage/"
+  kafkaSchemaRegistryUrl: "https://psrc-30dr2.us-central1.gcp.confluent.cloud"
+  kafkaSaslMechanism: "PLAIN"
+  kafkaSecurityProtocol: "SASL_SSL"
+  redisHost: "10.49.189.11"
+  redisPort: "6378"
+  customerCacheMaximumSize: "33500"
+  customerCacheExpireAfterAccess: "60M"
+  managementEndpointShowDetails: "never"
+  logLevel: "INFO"
+  appVersion: "1.0"
+  splunkStartArgs: "--accept-license --answer-yes"
+  splunkGroup: "root"
+  splunkPort: "8089"
+  splunkServer: "lpec5009spkdm01.cardinalhealth.net"
+  splunkUser: "root"
+  splunkCmd: "add monitor /var/log -index ecomm_nxtgen_non-prod"
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+securityContext: { }
+
+podSecurityContext: { }
