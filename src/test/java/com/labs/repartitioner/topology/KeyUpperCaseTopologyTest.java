@@ -100,4 +100,11 @@ class KeyUpperCaseTopologyTest {
 
         verify(valueOps, never()).set(eq("XYZ"), any());
     }
+
+    @Test
+    void skipsRedisInteraction_whenKeyIsNull() {
+        inputTopic.pipeInput(null, "value");
+
+        verify(redisTemplate, never()).opsForValue();
+    }
 }
