@@ -29,6 +29,21 @@ jobs:
           gradle --version
           gradle test jacocoTestReport
 
+      - name: Install xmllint
+        run: sudo apt-get update && sudo apt-get install -y libxml2-utils
+
+      - name: Checking Greeting Stream coverage
+        run: |
+          COVERAGE=$(xmllint --xpath "string(//report/counter[@type='INSTRUCTION']/@covered)" build/reports/jacoco/test/jacocoTestReport.xml)
+          MISSED=$(xmllint --xpath "string(//report/counter[@type='INSTRUCTION']/@missed)" build/reports/jacoco/test/jacocoTestReport.xml)
+          TOTAL=$((COVERAGE + MISSED))
+          PERCENTAGE=$((100 * COVERAGE / TOTAL))
+          echo "Coverage is $PERCENTAGE%"
+          if [ "$PERCENTAGE" -lt 80 ]; then
+            echo "Coverage is below 80% ($PERCENTAGE%)"
+            exit 1
+          fi
+
   publish:
     name: Build & Push Docker image
     runs-on: ubuntu-latest

@@ -39,4 +39,5 @@ out/
 
 ### Other files ###
 .env
+docker/*.jar
 testsmanifests/
