@@ -39,11 +39,13 @@ public class KeyUpperCaseTopology {
         upperKeyStream.peek((k, v) -> {
             log.info("key: {} - Value: {}", k, v);
 
-            var value =  Optional.ofNullable(redisTemplate.opsForValue().get(k));
+            if (k != null) {
+                var value = Optional.ofNullable(redisTemplate.opsForValue().get(k));
 
-            if (value.isEmpty())
-                redisTemplate.opsForValue().set(k, v);
-
+                if (value.isEmpty()) {
+                    redisTemplate.opsForValue().set(k, v);
+                }
+            }
         });
 
         upperKeyStream.toTable(
