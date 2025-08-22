@@ -1,16 +1,16 @@
-1. Access to the Coveo-Repartitioner Healty HTTP endpoint::
+1. Access to the GKE Deploy Healty HTTP endpoint::
 
 {{- if contains "NodePort" .Values.service.type }}
 The service is exposed via **NodePort**. You can access the application endpoint with:
 
   export NODE_IP=$(kubectl get nodes -o jsonpath="{.items[0].status.addresses[0].address}")
-  export NODE_PORT=$(kubectl get svc {{ include "cah-helmchart-base.buildName" (list . "svc") }} -o jsonpath="{.spec.ports[0].nodePort}")
+  export NODE_PORT=$(kubectl get svc {{ include "labs-helmchart-base.buildName" (list . "svc") }} -o jsonpath="{.spec.ports[0].nodePort}")
   echo "Application endpoint: http://$NODE_IP:$NODE_PORT/actuator/health"
 
 {{- else if contains "LoadBalancer" .Values.service.type }}
 The service is exposed via **LoadBalancer**. External IP assignment may take a few minutes:
 
-  export LB_IP=$(kubectl get svc {{ include "cah-helmchart-base.buildName" (list . "svc") }} -o jsonpath="{.status.loadBalancer.ingress[0].ip}")
+  export LB_IP=$(kubectl get svc {{ include "labs-helmchart-base.buildName" (list . "svc") }} -o jsonpath="{.status.loadBalancer.ingress[0].ip}")
   export PORT={{ .Values.service.port }}
   echo "Application endpoint: http://$LB_IP:$PORT/actuator/health"
 
@@ -20,7 +20,7 @@ To access it locally, you can use port-forwarding:
   kubectl get svc
   kubectl port-forward svc/[SERVICE_NAME] 8080:80
 
-  export SVC_NAME=$(kubectl get svc -l "app.kubernetes.io/name={{ include "cah-helmchart-base.buildName" (list . "svc") }}" -o jsonpath="{.items[0].metadata.name}")
+  export SVC_NAME=$(kubectl get svc -l "app.kubernetes.io/name={{ include "labs-helmchart-base.buildName" (list . "svc") }}" -o jsonpath="{.items[0].metadata.name}")
   kubectl port-forward svc/${SVC_NAME} 8080:80
   echo "Application accessible at: http://127.0.0.1:8080/actuator/health"
 {{- else }}
