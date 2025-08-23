@@ -1,21 +1,19 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "cah-helmchart-base.buildName" (list . "deploy") }}
+  name: {{ include "labs-helmchart-base.buildName" (list . "deploy") }}
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "cah-helmchart-base.labels" . | nindent 4 }}
-      {{- include "cah-helmchart-base.workload-labels" . | nindent 4 }}
+    {{- include "labs-helmchart-base.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
-      {{- include "cah-helmchart-base.selector-labels" . | nindent 6 }}
+      {{- include "labs-helmchart-base.selector-labels" . | nindent 6 }}
   template:
     metadata:
       labels:
-        {{- include "cah-helmchart-base.selector-labels" . | nindent 8 }}
-          {{- include "cah-helmchart-base.workload-labels" . | nindent 8 }}
+        {{- include "labs-helmchart-base.selector-labels" . | nindent 8 }}
     spec:
       securityContext:
         {{- toYaml .Values.securityContext | nindent 8 }}
@@ -27,33 +25,13 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           envFrom:
             - configMapRef:
-                name: {{ include "cah-helmchart-base.buildName" (list . "envcfg") }}
+                name: {{ include "labs-helmchart-base.buildName" (list . "envcfg") }}
           env:
-            - name: KAFKA_JAAS_USERNAME
+            - name: REDIS_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "cah-helmchart-base.buildName" (list . "secsa") }}
-                  key: KAFKA_JAAS_USERNAME
-            - name: KAFKA_JAAS_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "cah-helmchart-base.buildName" (list . "secsa") }}
-                  key: KAFKA_JAAS_PASSWORD
-            - name: KAFKA_AUTH_USER_INFO
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "cah-helmchart-base.buildName" (list . "secsa") }}
-                  key: KAFKA_AUTH_USER_INFO
-            - name: KAFKA_AUTH_CREDENTIALS_SOURCE
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "cah-helmchart-base.buildName" (list . "secsa") }}
-                  key: KAFKA_AUTH_CREDENTIALS_SOURCE
-            - name: PUBLISHER_REDIS_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "cah-helmchart-base.buildName" (list . "secsa") }}
-                  key: PUBLISHER_REDIS_PASSWORD
+                  name: {{ include "labs-helmchart-base.buildName" (list . "secsa") }}
+                  key: REDIS_PASSWORD
           securityContext:
             {{- toYaml .Values.podSecurityContext | nindent 12 }}
           volumeMounts:
@@ -89,7 +67,7 @@ spec:
           imagePullPolicy: {{ .Values.splunk.pullPolicy }}
           envFrom:
             - configMapRef:
-                name: {{ include "cah-helmchart-base.buildName" (list . "spkcfg") }}
+                name: {{ include "labs-helmchart-base.buildName" (list . "spkcfg") }}
           {{- with .Values.splunk.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
@@ -141,13 +119,13 @@ spec:
             driver: secrets-store.csi.k8s.io
             readOnly: true
             volumeAttributes:
-              secretProviderClass: {{ include "cah-helmchart-base.buildName" (list . "envsp") }}
+              secretProviderClass: {{ include "labs-helmchart-base.buildName" (list . "envsp") }}
         - name: env-splunk-volume
           csi:
             driver: secrets-store.csi.k8s.io
             readOnly: true
             volumeAttributes:
-              secretProviderClass: {{ include "cah-helmchart-base.buildName" (list . "spksp") }}
+              secretProviderClass: {{ include "labs-helmchart-base.buildName" (list . "spksp") }}
         - name: splunk-logs
           emptyDir: { }
       {{- with .Values.nodeSelector }}

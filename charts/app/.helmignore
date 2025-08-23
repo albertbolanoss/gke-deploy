@@ -1,0 +1,4 @@
+templates/secret.yaml
+templates/splunkSecret.yaml
+templates/deployment.yaml
+templates/splunkConfig.yaml

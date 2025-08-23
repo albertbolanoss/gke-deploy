@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: {{ include "cah-helmchart-base.buildName" (list . "test") }}
+  name: {{ include "labs-helmchart-base.buildName" (list . "test") }}
   namespace: {{ .Values.namespace }}
   annotations:
     "helm.sh/hook": test-success
@@ -10,5 +10,5 @@ spec:
     - name: wget
       image: busybox
       command: ['wget']
-      args:  ['{{ include "cah-helmchart-base.buildName" (list . "svc") }}:{{ .Values.service.port }}']
+      args:  ['{{ include "labs-helmchart-base.buildName" (list . "svc") }}:{{ .Values.service.port }}']
   restartPolicy: Never

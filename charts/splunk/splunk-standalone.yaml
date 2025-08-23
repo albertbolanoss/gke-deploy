@@ -1,0 +1,17 @@
+apiVersion: enterprise.splunk.com/v3
+kind: Standalone
+metadata:
+  name: splunk-s1
+  namespace: splunk-operator
+spec:
+  image: splunk/splunk:9.2.1
+  defaults: |
+    SPLUNK_PASSWORD=Aaa123456+Upsffs
+    SPLUNK_START_ARGS=--accept-license
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "250m"
+    limits:
+      memory: "1Gi"
+      cpu: "500m"

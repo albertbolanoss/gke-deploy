@@ -1,35 +1,35 @@
-# Default values for cah-helmchart-base.
+# Default values for labs-helmchart-base.
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 # Note the commented properties have a default value by environment if specify a value here, it set up this value for all environments
 environment: "dev"
 
-replicaCount: 6
+replicaCount: 1
 
 metadata:
-  namePrefix: "ecomm-nxtgen-kafka"
-  name: "coveo-repartitioner"
-  defaultNamespace: "ecomm-nxtgen-kafka"
+  namePrefix: "labs-soft"
+  name: "gke-deploy"
+  defaultNamespace: "labs-dev"
 
 image:
-  repository: harbor.dev1.cardinalhealth.net/ecomm-nxtgen/ecomm-nxtgen-kafka-pd-coveo-repartitioner-gke
-  tag: 0.0.6
+  repository: luigisamurai/gkedeploy
+  tag: 0.0.1
   pullPolicy: Always
 
 secretManager:
-  envsVars: "projects/363147481374/secrets/searchindexer-dev/versions/latest"
-  splunk: "projects/363147481374/secrets/splunk-dev/versions/latest"
+  envsVars: "projects/230862495170/secrets/deploy-dev/versions/latest"
+  splunk: "projects/230862495170/secrets/splunk-dev/versions/latest"
 
 resources:
   requests:
     cpu: "500m"
-    memory: "512Mi"
+    memory: "256Mi"
   limits:
-    cpu: 2
-    memory: "3Gi"
+    cpu: 1
+    memory: "512Mi"
 
 splunk:
-  repository: harbor.dev1.cardinalhealth.net/docker-hub-proxy/splunk/universalforwarder
+  repository: splunk/universalforwarder
   tag: 9.3.3
   pullPolicy: IfNotPresent
   resources:
@@ -64,30 +64,8 @@ readinessProbe:
   successThreshold: 1
 
 envs:
-  pricingFilterEnabled: "true"
-  refinedProductTopicEnabled: "true"
-  pricingEligibilityTopicEnabled: "true"
-  productScanTopicEnabled: "true"
-  ednaTopicEnabled: "true"
-  stockStatusTopicEnabled: "true"
-  productInclusionTopicEnabled: "true"
-  taxonomyTopicEnabled: "true"
-  nonReturnableTopicEnabled: "true"
-  customerAccountTopicEnabled: "true"
-  rocksdbMaxSpace: "3221225472"
-  kafkaBootstrapServers: "lkc-1jr5dz-61m326.us-central1.gcp.glb.confluent.cloud:9092"
-  kafkaApplicationId: "vantus_phm_pd_coveo_repartitioner_gke"
-  kafkaStreamState: ".local-storage/"
-  kafkaSchemaRegistryUrl: "https://psrc-30dr2.us-central1.gcp.confluent.cloud"
-  kafkaSaslMechanism: "PLAIN"
-  kafkaSecurityProtocol: "SASL_SSL"
-  redisHost: "10.49.189.11"
-  redisPort: "6378"
-  customerCacheMaximumSize: "33500"
-  customerCacheExpireAfterAccess: "60M"
-  managementEndpointShowDetails: "never"
-  logLevel: "INFO"
-  appVersion: "1.0"
+  kafkaBootstrapServers: "broker2:9092"
+  redisHost: "redis"
   splunkStartArgs: "--accept-license --answer-yes"
   splunkGroup: "root"
   splunkPort: "8089"

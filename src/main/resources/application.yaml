@@ -12,3 +12,22 @@ spring:
       host: ${REDIS_HOST}
       port: 6379
       password: ${REDIS_PASSWORD}
+
+management:
+  info:
+    build.enable: false
+    git.enabled: true
+    env.enabled: true
+  health:
+    binders.enabled: true
+    diskSpace.enabled: false
+  endpoint:
+    health:
+      enabled: true
+      show-details: always
+  endpoints:
+    web:
+      exposure:
+        include:
+          - health
+          - info

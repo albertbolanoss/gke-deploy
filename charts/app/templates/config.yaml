@@ -1,34 +1,12 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ include "cah-helmchart-base.buildName" (list . "envcfg") }}
+  name: {{ include "labs-helmchart-base.buildName" (list . "envcfg") }}
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "cah-helmchart-base.labels" . | nindent 4 }}
-      {{- include "cah-helmchart-base.workload-labels" . | nindent 4 }}
+    {{- include "labs-helmchart-base.labels" . | nindent 4 }}
 data:
   "SPRING_PROFILES_ACTIVE": "{{ .Values.environment }}"
-  "PRICING_FILTER_ENABLED": {{ .Values.envs.pricingFilterEnabled | quote }}
-  "REFINED_PRODUCT_TOPIC_ENABLED": {{ .Values.envs.refinedProductTopicEnabled | quote }}
-  "PRICING_ELIGIBILITY_TOPIC_ENABLED": {{ .Values.envs.pricingEligibilityTopicEnabled | quote }}
-  "PRODUCT_SCAN_TOPIC_ENABLED": {{ .Values.envs.productScanTopicEnabled | quote }}
-  "EDNA_TOPIC_ENABLED": {{ .Values.envs.ednaTopicEnabled | quote }}
-  "STOCK_STATUS_TOPIC_ENABLED": {{ .Values.envs.stockStatusTopicEnabled | quote }}
-  "PRODUCT_INCLUSION_TOPIC_ENABLED": {{ .Values.envs.productInclusionTopicEnabled | quote }}
-  "TAXONOMY_TOPIC_ENABLED": {{ .Values.envs.taxonomyTopicEnabled | quote }}
-  "NON_RETURNABLE_TOPIC_ENABLED": {{ .Values.envs.nonReturnableTopicEnabled | quote }}
-  "CUSTOMER_ACCOUNT_TOPIC_ENABLED": {{ .Values.envs.customerAccountTopicEnabled | quote }}
-  "ROCKSDB_MAX_SPACE": {{ .Values.envs.rocksdbMaxSpace | quote }}
   "KAFKA_BOOTSTRAP_SERVERS": {{ .Values.envs.kafkaBootstrapServers | quote }}
-  "KAFKA_APPLICATION_ID": {{ .Values.envs.kafkaApplicationId | quote }}
-  "KAFKA_STREAM_STATE": {{ .Values.envs.kafkaStreamState | quote }}
-  "KAFKA_SCHEMA_REGISTRY_URL": {{ .Values.envs.kafkaSchemaRegistryUrl | quote }}
-  "KAFKA_SASL_MECHANISM": {{ .Values.envs.kafkaSaslMechanism | quote }}
-  "KAFKA_SECURITY_PROTOCOL": {{ .Values.envs.kafkaSecurityProtocol | quote }}
   "REDIS_HOST": {{ .Values.envs.redisHost | quote }}
-  "REDIS_PORT": {{ .Values.envs.redisPort | quote }}
-  "CUSTOMER_CACHE_MAXIMUM_SIZE": {{ .Values.envs.customerCacheMaximumSize | quote }}
-  "CUSTOMER_CACHE_EXPIRE_AFTER_ACCESS": {{ .Values.envs.customerCacheExpireAfterAccess | quote }}
-  "MANAGEMENT_ENDPOINT_SHOW_DETAILS": {{ .Values.envs.managementEndpointShowDetails | quote }}
-  "LOG_LEVEL": {{ .Values.envs.logLevel | quote }}
-  "APP_VERSION": {{ .Values.envs.appVersion | quote }}
+  "REDIS_PASSWORD": "password"

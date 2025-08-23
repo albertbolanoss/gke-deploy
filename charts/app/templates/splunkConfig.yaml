@@ -1,11 +1,10 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ include "cah-helmchart-base.buildName" (list . "spkcfg") }}
+  name: {{ include "labs-helmchart-base.buildName" (list . "spkcfg") }}
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "cah-helmchart-base.labels" . | nindent 4 }}
-      {{- include "cah-helmchart-base.workload-labels" . | nindent 4 }}
+    {{- include "labs-helmchart-base.labels" . | nindent 4 }}
 data:
   "SPLUNK_START_ARGS": {{ .Values.envs.splunkStartArgs | quote }}
   "SPLUNK_GROUP": {{ .Values.envs.splunkGroup | quote }}
