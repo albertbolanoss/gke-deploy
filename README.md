@@ -141,12 +141,8 @@ kubectl get pod -n $NAMESPACE
 # Create the topics
 kubectl exec -it broker2 -n $NAMESPACE -- sh
 # In the container terminal
-/opt/bitnami/kafka/bin/kafka-topics.sh \
-  --bootstrap-server localhost:9092 \
-  --create \
-  --topic repartitioner-uppercase \
-  --partitions 3 \
-  --replication-factor 1
+/opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --create --topic repartitioner-uppercase --partitions 3 --replication-factor 1
+/opt/bitnami/kafka/bin/kafka-console-producer.sh --bootstrap-server localhost:9092 --topic repartitioner-uppercase --property parse.key=true --property key.separator=:
 ```
 
 #### Install service
@@ -154,11 +150,16 @@ kubectl exec -it broker2 -n $NAMESPACE -- sh
 # Install
 helm install labs-deploy charts/app -n $NAMESPACE
 
-# Check
+# Checking
 kubectl get pod -n $NAMESPACE
 POD_NAME=$(kubectl get pods -n $NAMESPACE -o jsonpath='{.items[1].metadata.name}')
 kubectl describe pod $POD_NAME -n $NAMESPACE
 kubectl logs -f $POD_NAME -n $NAMESPACE
+
+# port forward
+kubectl port-forward svc/labs-soft-npd-gke-deploy-dev-svc 8080:80 -n $NAMESPACE
+echo "Application accessible at: http://127.0.0.1:8080/actuator/health"
+
 
 kubectl exec -it broker2 -n $NAMESPACE -- sh
 
@@ -177,7 +178,27 @@ gcloud container clusters delete "$CLUSTER_NAME" \
   --quiet
 ```
 
+- Install Argo CI /CD
 
+```sh
+kubectl create ns argocd
+
+helm repo add argo https://argoproj.github.io/argo-helm
+helm repo update
+helm install argocd argo/argo-cd --namespace argocd
+
+# Get the initial password to access to the API
+kubectl get secret -n argocd
+kubectl get secret argocd-initial-admin-secret -n argocd -o yaml
+echo "PASSWORD_BASE64" | base64 --decode
+
+# Create the port-forward to access 
+kubectl port-forward svc/argocd-server -n argocd 8080:443
+
+# Testing
+argocd version
+API: http://localhost:8080
+```
 
 - Install Splunk
 
@@ -195,29 +216,6 @@ helm install splunk-operator splunk/splunk-operator \
 kubectl apply -f deployment/splunk/splunk-standalone.yaml
 kubectl get pods -n splunk-operator
 kubectl port-forward -n splunk-operator svc/splunk-s1-standalone 8000:8000
-```
-
-- Install Argo CI /CD
-
-```sh
-kubectl create ns argocd
-
-helm repo add argo https://argoproj.github.io/argo-helm
-helm repo update
-kubectl create namespace argocd
-helm install argocd argo/argo-cd --namespace argocd
-
-# Get the initial password to access to the API
-kubectl get secret -n argocd
-kubectl get secret argocd-initial-admin-secret -n argocd -o yaml
-echo "TFljRnNjVXhsalBOUVdtMA==" | base64 --decode
-
-# Create the port-forward to access 
-kubectl port-forward svc/argocd-server -n argocd 8080:443
-
-# Testing
-argocd version
-API: http://localhost:8080
 ```
 
 

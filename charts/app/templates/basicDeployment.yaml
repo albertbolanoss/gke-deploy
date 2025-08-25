@@ -26,6 +26,12 @@ spec:
           envFrom:
             - configMapRef:
                 name: {{ include "labs-helmchart-base.buildName" (list . "envcfg") }}
+          env:
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "labs-helmchart-base.buildName" (list . "secsa") }}
+                  key: REDIS_PASSWORD
           securityContext:
             {{- toYaml .Values.podSecurityContext | nindent 12 }}
           {{- with .Values.resources }}

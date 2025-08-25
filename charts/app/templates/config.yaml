@@ -9,4 +9,3 @@ data:
   "SPRING_PROFILES_ACTIVE": "{{ .Values.environment }}"
   "KAFKA_BOOTSTRAP_SERVERS": {{ .Values.envs.kafkaBootstrapServers | quote }}
   "REDIS_HOST": {{ .Values.envs.redisHost | quote }}
-  "REDIS_PASSWORD": "password"
