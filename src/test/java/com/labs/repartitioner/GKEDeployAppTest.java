@@ -10,7 +10,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mockStatic;
 
 @SpringBootTest
-class RepartitionerApplicationTest {
+class GKEDeployAppTest {
 
     @Test
     void contextLoads() {
@@ -20,12 +20,12 @@ class RepartitionerApplicationTest {
     @Test
     void mainShouldInvokeSpringApplicationRun() {
         try (MockedStatic<SpringApplication> spring = mockStatic(SpringApplication.class)) {
-            spring.when(() -> SpringApplication.run(RepartitionerApplication.class, new String[]{}))
+            spring.when(() -> SpringApplication.run(GKEDeployApp.class, new String[]{}))
                     .thenReturn(null);
 
-            assertDoesNotThrow(() -> RepartitionerApplication.main(new String[]{}));
+            assertDoesNotThrow(() -> GKEDeployApp.main(new String[]{}));
 
-            spring.verify(() -> SpringApplication.run(RepartitionerApplication.class, new String[]{}));
+            spring.verify(() -> SpringApplication.run(GKEDeployApp.class, new String[]{}));
         }
     }
 }

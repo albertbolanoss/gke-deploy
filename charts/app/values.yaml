@@ -46,7 +46,7 @@ service:
   targetPort: 9081
 
 livenessProbe:
-  path: /actuator/health
+  path: /actuator/health/liveness
   port: 9081
   initialDelaySeconds: 60
   periodSeconds: 20
@@ -55,7 +55,7 @@ livenessProbe:
   successThreshold: 1
 
 readinessProbe:
-  path: /actuator/health
+  path: /actuator/health/readiness
   port: 9081
   initialDelaySeconds: 30
   periodSeconds: 20
