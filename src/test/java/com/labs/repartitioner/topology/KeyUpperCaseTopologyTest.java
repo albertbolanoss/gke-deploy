@@ -65,10 +65,6 @@ class KeyUpperCaseTopologyTest {
 
         inputTopic = testDriver.createInputTopic(INPUT_TOPIC, new StringSerializer(), new StringSerializer());
         keyValueStore = testDriver.getKeyValueStore("uppercase-key-store");
-
-        when(redisTemplate.opsForValue()).thenReturn(valueOps);
-        when(valueOps.get(anyString())).thenReturn(null);
-
     }
 
     @AfterEach
@@ -80,6 +76,9 @@ class KeyUpperCaseTopologyTest {
     void uppercasesKey_andWritesToStateStore() {
         var key = "foo";
 
+        when(redisTemplate.opsForValue()).thenReturn(valueOps);
+        when(valueOps.get(anyString())).thenReturn(null);
+
         inputTopic.pipeInput(key, "bar");
 
         Assertions.assertEquals("bar", keyValueStore.get(key.toUpperCase()));
@@ -87,6 +86,9 @@ class KeyUpperCaseTopologyTest {
 
     @Test
     void writesToRedis_whenKeyNotPresent() {
+        when(redisTemplate.opsForValue()).thenReturn(valueOps);
+        when(valueOps.get(anyString())).thenReturn(null);
+
         inputTopic.pipeInput("abc", "123");
 
         verify(valueOps, times(1)).set("ABC", "123");
@@ -94,10 +96,19 @@ class KeyUpperCaseTopologyTest {
 
     @Test
     void doesNotWriteToRedis_whenKeyAlreadyPresent() {
+        when(redisTemplate.opsForValue()).thenReturn(valueOps);
+        when(valueOps.get(anyString())).thenReturn(null);
         when(valueOps.get("XYZ")).thenReturn("old");
 
         inputTopic.pipeInput("xyz", "new");
 
         verify(valueOps, never()).set(eq("XYZ"), any());
+    }
+
+    @Test
+    void skipsRedisInteraction_whenKeyIsNull() {
+        inputTopic.pipeInput(null, "value");
+
+        verify(redisTemplate, never()).opsForValue();
     }
 }

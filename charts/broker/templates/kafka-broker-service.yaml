@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.broker.name }}
+spec:
+  selector:
+    app: kafka-broker2
+  ports:
+    - name: kafka
+      port: {{ .Values.broker.clientPort }}
+      targetPort: {{ .Values.broker.clientPort }}
+    - name: controller
+      port: {{ .Values.broker.controllerPort }}
+      targetPort: {{ .Values.broker.controllerPort }}

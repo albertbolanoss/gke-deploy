@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "labs-helmchart-base.buildName" (list . "spkcfg") }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "labs-helmchart-base.labels" . | nindent 4 }}
+data:
+  "SPLUNK_START_ARGS": {{ .Values.envs.splunkStartArgs | quote }}
+  "SPLUNK_GROUP": {{ .Values.envs.splunkGroup | quote }}
+  "SPLUNK_S2S_PORT": {{ .Values.envs.splunkPort | quote }}
+  "SPLUNK_DEPLOYMENT_SERVER": {{ .Values.envs.splunkServer | quote }}
+  "SPLUNK_USER": {{ .Values.envs.splunkUser | quote }}
+  "SPLUNK_CMD":  {{ .Values.envs.splunkCmd | quote }}

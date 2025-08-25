@@ -1,0 +1,4 @@
+s1:
+  enabled: true
+  splunk:
+    password: "Aaa123456+Upsffs"

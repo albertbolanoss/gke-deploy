@@ -1,0 +1,12 @@
+image:
+  repository: bitnami/kafka
+  tag: latest
+
+broker:
+  id: 1
+  name: broker2
+  advertisedHost: broker2
+  controllerPort: 9093
+  clientPort: 9092
+
+resources: {}

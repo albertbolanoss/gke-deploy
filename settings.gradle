@@ -1,1 +1,8 @@
-rootProject.name = 'repartitioner'
+pluginManagement {
+    repositories {
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+
+rootProject.name = 'gke_deploy'

@@ -1,0 +1,6 @@
+apiVersion: v2
+name: kafka-broker2
+description: Kafka broker2 in KRaft mode
+type: application
+version: 0.1.0
+appVersion: "3.7.0"
