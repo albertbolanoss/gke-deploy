@@ -6,10 +6,10 @@ import org.springframework.kafka.annotation.EnableKafkaStreams;
 
 @SpringBootApplication
 @EnableKafkaStreams
-public class RepartitionerApplication {
+public class GKEDeployApp {
 
 	public static void main(String[] args) {
-		SpringApplication.run(RepartitionerApplication.class, args);
+		SpringApplication.run(GKEDeployApp.class, args);
 	}
 
 }

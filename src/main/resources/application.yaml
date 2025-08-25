@@ -2,7 +2,7 @@ server:
   port: 9081
 spring:
   application:
-    name: Repartitioner
+    name: LABS_GKE_DEPLOY
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
     streams:
@@ -14,20 +14,21 @@ spring:
       password: ${REDIS_PASSWORD}
 
 management:
-  info:
-    build.enable: false
-    git.enabled: true
-    env.enabled: true
-  health:
-    binders.enabled: true
-    diskSpace.enabled: false
   endpoint:
     health:
       enabled: true
       show-details: always
+      probes:
+        enabled: true
+      group:
+        readiness:
+          include: ping,redis,kafkaHealthCheck
+        liveness:
+          include: ping
   endpoints:
-    web:
-      exposure:
-        include:
-          - health
-          - info
+    web.exposure.include: health,info
+
+
+health:
+  kafka:
+    rebalancing-max: PT1M
