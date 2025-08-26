@@ -26,12 +26,10 @@ spec:
           envFrom:
             - configMapRef:
                 name: {{ include "labs-helmchart-base.buildName" (list . "envcfg") }}
-          env:
-            - name: REDIS_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "labs-helmchart-base.buildName" (list . "secsa") }}
-                  key: REDIS_PASSWORD
+          volumeMounts:
+            - name: env-vars-volume
+              mountPath: "/sbin/envVars"
+              readOnly: true
           securityContext:
             {{- toYaml .Values.podSecurityContext | nindent 12 }}
           {{- with .Values.resources }}
@@ -56,6 +54,13 @@ spec:
             timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
             failureThreshold: {{ .Values.readinessProbe.failureThreshold }}
             successThreshold: {{ .Values.readinessProbe.successThreshold }}
+      volumes:
+        - name: env-vars-volume
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: {{ include "labs-helmchart-base.buildName" (list . "envsp") }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
