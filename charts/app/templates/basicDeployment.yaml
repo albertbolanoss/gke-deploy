@@ -27,6 +27,12 @@ spec:
           envFrom:
             - configMapRef:
                 name: {{ include "labs-helmchart-base.buildName" (list . "envcfg") }}
+          env:
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "labs-helmchart-base.buildName" (list . "secsa") }}
+                  key: REDIS_PASSWORD
           volumeMounts:
             - name: env-vars-volume
               mountPath: "/etc/secrets"
