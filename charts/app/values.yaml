@@ -17,7 +17,7 @@ image:
   pullPolicy: Always
 
 secretManager:
-  envsVars: "projects/230862495170/secrets/deploy-dev/versions/latest"
+  envsVars: "projects/230862495170/secrets/env-vars-dev/versions/latest"
   splunk: "projects/230862495170/secrets/splunk-dev/versions/latest"
 
 resources:
@@ -82,3 +82,7 @@ affinity: {}
 securityContext: { }
 
 podSecurityContext: { }
+
+serviceAccount:
+  name: labs-sa
+  project: safari-gke-462517

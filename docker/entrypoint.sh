@@ -3,7 +3,7 @@
 set -e
 date
 
-SECRET_ENV_PATH="/sbin/envVars/secrets.env"
+SECRET_ENV_PATH="/etc/secrets/secrets.env"
 
 max_wait=30
 waited=0
