@@ -106,8 +106,10 @@ docker run --name gkedeploy \
 REGION=us-east1
 ZONE=us-east1-b
 PROJECT_ID=safari-gke-462517
-CLUSTER_NAME=labs-kube-reg
+CLUSTER_NAME=labs-kube
 NAMESPACE=labs-dev
+ENV_VARS_SECRET=env-vars-dev
+GSA=labs-sa
 ```
 #### Create Autopilot Cluster
 
@@ -116,21 +118,48 @@ NAMESPACE=labs-dev
 gcloud container clusters create-auto "$CLUSTER_NAME" \
   --region="$REGION" \
   --project="$PROJECT_ID" \
-  --enable-secret-manager  
+  --release-channel=stable \
+  --enable-workload-identity \
+  --addons=GcpSecretManagerCsiDriver
 
   
 # Get credential of kubectl
 gcloud container clusters get-credentials "$CLUSTER_NAME" \
   --region="$REGION" \
   --project="$PROJECT_ID"
-  
-# Create namespace
-kubectl create namespace $NAMESPACE
+
 ```
+#### Create Secret Manager
+
+```sh
+gcloud secrets create $ENV_VARS_SECRET \
+    --project=$PROJECT_ID \
+    --replication-policy="automatic" \
+    --data-file=charts/secrets/secrets.env
+```
+
+### Create GSA and Grant permision to secret manager
+```sh
+# 1. Crea una cuenta de servicio de Google (GSA) para tu aplicación
+gcloud iam service-accounts create $GSA \
+    --display-name="Service Account for Labs" \
+    --project=$PROJECT_ID
+
+# 2. Otorga el rol de "Secret Manager Secret Accessor" a la GSA
+gcloud secrets add-iam-policy-binding $ENV_VARS_SECRET \
+    --project=$PROJECT_ID \
+    --role="roles/secretmanager.secretAccessor" \
+    --member="serviceAccount:$GSA@$PROJECT_ID.iam.gserviceaccount.com"
+```
+
 
 #### Create Kafka Broker and Redis
 
 ```sh
+# Create namespace
+kubectl create namespace $NAMESPACE
+
+
 # Install
 helm install broker2 charts/broker -n $NAMESPACE
 helm install redis charts/redis -n $NAMESPACE
