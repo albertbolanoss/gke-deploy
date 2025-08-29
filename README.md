@@ -170,7 +170,6 @@ gcloud secrets add-iam-policy-binding "$ENV_VARS_SECRET" \
   --project="$PROJECT_ID" \
   --role="roles/secretmanager.secretAccessor" \
   --member="principal://iam.googleapis.com/projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/$PROJECT_ID.svc.id.goog/subject/ns/$NAMESPACE/sa/$KSA"
-
 ```
 
 #### Create GSA and Grant permision to secret manager using GCP provider (Compatible with Standard cluster)
@@ -324,6 +323,13 @@ gcloud container clusters delete "$CLUSTER_NAME" \
 kubectl get pod -n $NAMESPACE
 
 kubectl describe pod labs-soft-npd-gke-deploy-dev-deploy-7f75bff4dd-9pjsr -n $NAMESPACE
+
+# Ver que el add-on está habilitado en el cluster
+gcloud container clusters describe "$CLUSTER_NAME" --location "$REGION" \
+  --project "$PROJECT_ID" | grep -A4 secretManagerConfig
+
+# Ver el volumen montado en el Pod
+kubectl exec -it deploy/labs-soft-npd-gke-deploy-dev-deploy -- sh -c 'ls -l /etc/secrets && echo && cat /etc/secrets/secrets.env | sed "s/=.*/=****/g"'
 
 # Create the topics with bitname
 kubectl exec -it broker2 -n $NAMESPACE -- sh
