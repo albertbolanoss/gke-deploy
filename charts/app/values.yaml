@@ -86,3 +86,6 @@ podSecurityContext: { }
 serviceAccount:
   name: labs-sa
   project: safari-gke-462517
+
+secret:
+  provider: local

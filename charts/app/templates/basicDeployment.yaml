@@ -15,28 +15,39 @@ spec:
       labels:
         {{- include "labs-helmchart-base.selector-labels" . | nindent 8 }}
     spec:
+      {{- if or (eq .Values.secret.provider "gcp") (eq .Values.secret.provider "gke") }}
       serviceAccountName: {{ .Values.serviceAccount.name }}
+      {{- end }}
       securityContext:
         {{- toYaml .Values.securityContext | nindent 8 }}
       containers:
         - name: {{ .Values.metadata.name }}
-          ports:
-            - containerPort: {{ .Values.service.targetPort }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.service.targetPort }}
+
           envFrom:
             - configMapRef:
                 name: {{ include "labs-helmchart-base.buildName" (list . "envcfg") }}
+
+          env:
+            - name: SPRING_CONFIG_IMPORT
+              value: "optional:file:/etc/secrets/secrets.env"
+
           volumeMounts:
             - name: env-vars-volume
               mountPath: "/etc/secrets"
               readOnly: true
+
           securityContext:
             {{- toYaml .Values.podSecurityContext | nindent 12 }}
+
           {{- with .Values.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+
           livenessProbe:
             httpGet:
               path: {{ .Values.livenessProbe.path }}
@@ -46,6 +57,7 @@ spec:
             timeoutSeconds: {{ .Values.livenessProbe.timeoutSeconds }}
             failureThreshold: {{ .Values.livenessProbe.failureThreshold }}
             successThreshold: {{ .Values.livenessProbe.successThreshold }}
+
           readinessProbe:
             httpGet:
               path: {{ .Values.readinessProbe.path }}
@@ -55,22 +67,41 @@ spec:
             timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
             failureThreshold: {{ .Values.readinessProbe.failureThreshold }}
             successThreshold: {{ .Values.readinessProbe.successThreshold }}
+
       volumes:
+        {{- if eq .Values.secret.provider "gcp" }}
         - name: env-vars-volume
           csi:
             driver: secrets-store.csi.k8s.io
             readOnly: true
             volumeAttributes:
               secretProviderClass: {{ include "labs-helmchart-base.buildName" (list . "envsp") }}
+        {{- else if eq .Values.secret.provider "gke" }}
+        - name: env-vars-volume
+          csi:
+            driver: secrets-store-gke.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: {{ include "labs-helmchart-base.buildName" (list . "envsp") }}
+        {{- else }}
+        - name: env-vars-volume
+          secret:
+            secretName: {{ include "labs-helmchart-base.buildName" (list . "envfile") }}
+            defaultMode: 0640
+            items:
+              - key: secrets.env
+                path: secrets.env
+        {{- end }}
+
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
       {{- end }}
     {{- with .Values.affinity }}
     affinity:
-      {{- toYaml . | nindent 8 }}
+      {{- toYaml . | nindent 6 }}
     {{- end }}
     {{- with .Values.tolerations }}
     tolerations:
-      {{- toYaml . | nindent 8 }}
+      {{- toYaml . | nindent 6 }}
     {{- end }}
