@@ -12,6 +12,7 @@ import org.apache.kafka.streams.kstream.Named;
 import org.apache.kafka.streams.state.KeyValueStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -19,6 +20,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import java.util.Optional;
 
 @Configuration
+@ConditionalOnProperty(name = "spring.kafka.enabled", havingValue = "true", matchIfMissing = true)
 public class KeyUpperCaseTopology {
     private final RedisTemplate<String, Object> redisTemplate;
     private final Logger log = LoggerFactory.getLogger(KeyUpperCaseTopology.class);

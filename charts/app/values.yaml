@@ -13,7 +13,7 @@ metadata:
 
 image:
   repository: luigisamurai/gkedeploy
-  tag: 0.0.1
+  tag: latest
   pullPolicy: Always
 
 secretManager:
@@ -88,4 +88,4 @@ serviceAccount:
   project: safari-gke-462517
 
 secret:
-  provider: gke
+  provider: local

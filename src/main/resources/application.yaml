@@ -4,8 +4,10 @@ spring:
   application:
     name: LABS_GKE_DEPLOY
   kafka:
+    enabled: false
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
     streams:
+      auto-startup: ${spring.kafka.enabled}
       application-id: ${spring.application.name}
     admin:
       auto-create: true
@@ -16,6 +18,9 @@ spring:
       password: ${REDIS_PASSWORD}
 
 management:
+  health:
+    redis:
+      enabled: false # Disable to test with redis
   endpoint:
     health:
       enabled: true
@@ -24,7 +29,7 @@ management:
         enabled: true
       group:
         readiness:
-          include: ping,redis,kafkaHealthCheck
+          include: ping #,redis,kafkaHealthCheck
         liveness:
           include: ping
   endpoints:
