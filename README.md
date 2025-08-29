@@ -111,8 +111,8 @@ NAMESPACE=labs-dev
 ENV_VARS_SECRET=env-vars-dev
 GSA=labs-sa
 KSA=gke-sa
-CSI_NAMESPACE=csi-secrets
 PROJECT_NUMBER=230862495170
+CSI_NAMESPACE=csi-secrets
 ```
 
 #### Enable needed APIs 
@@ -128,8 +128,8 @@ gcloud services enable container.googleapis.com secretmanager.googleapis.com iam
 gcloud container clusters create-auto "$CLUSTER_NAME" \
   --region="$REGION" \
   --project="$PROJECT_ID" \
-  --release-channel=stable
-  --enable-secret-manager  \
+  --release-channel=stable  \
+  --enable-secret-manager
   
 # Get credential of kubectl
 gcloud container clusters get-credentials "$CLUSTER_NAME" \
@@ -163,7 +163,6 @@ gcloud secrets add-iam-policy-binding "$ENV_VARS_SECRET" \
   --project="$PROJECT_ID" \
   --role="roles/secretmanager.secretAccessor" \
   --member="principal://iam.googleapis.com/projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/$PROJECT_ID.svc.id.goog/subject/ns/$NAMESPACE/sa/$KSA"
-
   
 ```
 
@@ -254,6 +253,13 @@ kubectl get pods -n $CSI_NAMESPACE
 helm install broker2 charts/broker -n $NAMESPACE
 helm install redis charts/redis -n $NAMESPACE
 helm install labs-deploy charts/app -n $NAMESPACE
+
+# Other way to install bitnami/kafka
+helm repo add strimzi https://strimzi.io/charts/
+helm repo update
+helm install strimzi strimzi/strimzi-kafka-operator -n "$NAMESPACE"
+broker: broker2-kafka-bootstrap.labs-dev.svc.cluster.local:9092
+
 ```
 
 #### Checking
@@ -264,11 +270,17 @@ kubectl get pod -n $NAMESPACE
 
 kubectl describe pod labs-soft-npd-gke-deploy-dev-deploy-7f75bff4dd-9pjsr -n $NAMESPACE
 
-# Create the topics
+# Create the topics with bitname
 kubectl exec -it broker2 -n $NAMESPACE -- sh
 # In the container terminal
 /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --create --topic repartitioner-uppercase --partitions 3 --replication-factor 1
 /opt/bitnami/kafka/bin/kafka-console-producer.sh --bootstrap-server localhost:9092 --topic repartitioner-uppercase --property parse.key=true --property key.separator=:
+
+# Create the topics with strimzi
+kubectl run kafka-client -ti --image=strimzi/kafka:0.39.0-kafka-3.7.0 --rm=true --restart=Never -n $NAMESPACE -- bash
+/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --create --topic repartitioner-uppercase --partitions 3 --replication-factor 1
+/opt/kafka/bin/kafka-console-producer.sh --bootstrap-server localhost:9092 --topic repartitioner-uppercase --property parse.key=true --property key.separator=:
+
 
 # Checking
 kubectl get pod -n $NAMESPACE
@@ -343,6 +355,9 @@ kubectl port-forward -n splunk-operator svc/splunk-s1-standalone 8000:8000
 
 1. Install services
 ```sh
+
+helm show values oci://registry-1.docker.io/bitnamicharts/kafka | sed -n '/^image:/,/^[^ ]/p'
+
 helm install broker2 charts/broker -n $Namespace
 helm install redis charts/redis -n $Namespace
 helm install kconsumer charts/app -n $Namespace

@@ -28,11 +28,8 @@ spec:
             - configMapRef:
                 name: {{ include "labs-helmchart-base.buildName" (list . "envcfg") }}
           env:
-            - name: REDIS_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "labs-helmchart-base.buildName" (list . "secsa") }}
-                  key: REDIS_PASSWORD
+            - name: SPRING_CONFIG_IMPORT
+              value: "optional:file:/etc/secrets/secrets.env"
           volumeMounts:
             - name: env-vars-volume
               mountPath: "/etc/secrets"
@@ -64,7 +61,7 @@ spec:
       volumes:
         - name: env-vars-volume
           csi:
-            driver: secrets-store.csi.k8s.io
+            driver: secrets-store-gke.csi.k8s.io
             readOnly: true
             volumeAttributes:
               secretProviderClass: {{ include "labs-helmchart-base.buildName" (list . "envsp") }}
