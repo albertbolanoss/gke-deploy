@@ -110,7 +110,17 @@ CLUSTER_NAME=labs-kube
 NAMESPACE=labs-dev
 ENV_VARS_SECRET=env-vars-dev
 GSA=labs-sa
+KSA=gke-sa
+PROJECT_NUMBER=230862495170
+CSI_NAMESPACE=csi-secrets
 ```
+
+#### Enable needed APIs 
+
+```sh
+gcloud services enable container.googleapis.com secretmanager.googleapis.com iam.googleapis.com --project $PROJECT_ID
+```
+
 #### Create Autopilot Cluster
 
 ```sh
@@ -118,17 +128,19 @@ GSA=labs-sa
 gcloud container clusters create-auto "$CLUSTER_NAME" \
   --region="$REGION" \
   --project="$PROJECT_ID" \
-  --release-channel=stable \
-  --enable-workload-identity \
-  --addons=GcpSecretManagerCsiDriver
-
+  --release-channel=stable  \
+  --enable-secret-manager
   
 # Get credential of kubectl
 gcloud container clusters get-credentials "$CLUSTER_NAME" \
   --region="$REGION" \
-  --project="$PROJECT_ID"
+  --project="$PROJECT_ID" \
+  --enable-secret-manager
 
+# Create namespace
+kubectl create namespace $NAMESPACE
 ```
+
 #### Create Secret Manager
 
 ```sh
@@ -138,7 +150,8 @@ gcloud secrets create $ENV_VARS_SECRET \
     --data-file=charts/secrets/secrets.env
 ```
 
-### Create GSA and Grant permision to secret manager
+
+#### Create GSA and Grant permision to secret manager using GKE provider
 ```sh
 # 1. Crea una cuenta de servicio de Google (GSA) para tu aplicación
 gcloud iam service-accounts create $GSA \
@@ -146,38 +159,128 @@ gcloud iam service-accounts create $GSA \
     --project=$PROJECT_ID
 
 # 2. Otorga el rol de "Secret Manager Secret Accessor" a la GSA
+gcloud secrets add-iam-policy-binding "$ENV_VARS_SECRET" \
+  --project="$PROJECT_ID" \
+  --role="roles/secretmanager.secretAccessor" \
+  --member="principal://iam.googleapis.com/projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/$PROJECT_ID.svc.id.goog/subject/ns/$NAMESPACE/sa/$KSA"
+  
+```
+
+
+#### Create GSA and Grant permision to secret manager using GCP provider
+
+```sh
+# 1. Crea una cuenta de servicio de Google (GSA) para tu aplicación
+gcloud iam service-accounts create $GSA \
+    --display-name="Service Account for Labs" \
+    --project=$PROJECT_ID
+
+# 2. Otorga el rol de "Secret Manager Secret Accessor" a la GSA
+
+# using GCP provider
+# 2. Otorga el rol de "Secret Manager Secret Accessor" a la GSA
 gcloud secrets add-iam-policy-binding $ENV_VARS_SECRET \
     --project=$PROJECT_ID \
     --role="roles/secretmanager.secretAccessor" \
     --member="serviceAccount:$GSA@$PROJECT_ID.iam.gserviceaccount.com"
+
+kubectl create serviceaccount $KSA -n $NAMESPACE
+
+# Annotate
+kubectl annotate serviceaccount \
+  --namespace $NAMESPACE \
+  $KSA iam.gke.io/gcp-service-account=$GSA@$PROJECT_ID.iam.gserviceaccount.com
+
+# Link with Workload Identity
+gcloud iam service-accounts add-iam-policy-binding \
+  $GSA@$PROJECT_ID.iam.gserviceaccount.com \
+  --role="roles/iam.workloadIdentityUser" \
+  --member="serviceAccount:$PROJECT_ID.svc.id.goog[$NAMESPACE/$KSA]" \
+  --project $PROJECT_ID -->
+
+# Secrets Store CSI Driver con provider GCP
+
+#3. Install Secret CRDs and Store CSI Driver
+# 3.1 Install repositories
+kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/secrets-store-csi-driver/main/config/crd/bases/secrets-store.csi.x-k8s.io_secretproviderclasses.yaml
+helm repo add secrets-store-csi-driver https://kubernetes-sigs.github.io/secrets-store-csi-driver/charts
+helm repo update 
+
+# Create namespace and install csi driver
+kubectl create namespace $CSI_NAMESPACE
+helm install csi-secrets-store secrets-store-csi-driver/secrets-store-csi-driver --namespace $CSI_NAMESPACE
+
+#Check the CRDs
+kubectl get crds | grep secretproviderclass
+kubectl api-resources | grep -i secretproviderclass
+kubectl explain secretproviderclass
+
+# Install gcp plugins (optional) 
+kubectl apply -f https://raw.githubusercontent.com/GoogleCloudPlatform/secrets-store-csi-driver-provider-gcp/main/deploy/provider-gcp-plugin.yaml --namespace $CSI_NAMESPACE
+
+
+gcloud container clusters update "$CLUSTER_NAME" \
+  --region="$REGION" \
+  --project="$PROJECT_ID" \
+  --release-channel=stable
+
+# secrets-store-csi-driver-xxxxx   Running
+kubectl get pods -n $CSI_NAMESPACE
+
+
+# kubectl create ns $CSI_NAMESPACE
+
+# helm repo add secrets-store-csi-driver https://kubernetes-sigs.github.io/secrets-store-csi-driver/charts
+# helm repo update
+
+# helm install csi secrets-store-csi-driver/secrets-store-csi-driver \
+#   -n $CSI_NAMESPACE \
+#   --set grpcSupportedProviders="gcp"
+
+# gcloud container clusters update "$CLUSTER_NAME" \
+#   --region="$REGION" \
+#   --project="$PROJECT_ID" \
+#   --release-channel=stable
+
+# kubectl get pods -n $CSI_NAMESPACE
 ```
 
-
-#### Create Kafka Broker and Redis
+#### Install dependencies and service
 
 ```sh
-# Create namespace
-kubectl create namespace $NAMESPACE
 
-
-# Install
+# Install dependencies and service
 helm install broker2 charts/broker -n $NAMESPACE
 helm install redis charts/redis -n $NAMESPACE
+helm install labs-deploy charts/app -n $NAMESPACE
+
+# Other way to install bitnami/kafka
+helm repo add strimzi https://strimzi.io/charts/
+helm repo update
+helm install strimzi strimzi/strimzi-kafka-operator -n "$NAMESPACE"
+broker: broker2-kafka-bootstrap.labs-dev.svc.cluster.local:9092
+
+```
+
+#### Checking
+```sh
 
 # Check the pods status
 kubectl get pod -n $NAMESPACE
 
-# Create the topics
+kubectl describe pod labs-soft-npd-gke-deploy-dev-deploy-7f75bff4dd-9pjsr -n $NAMESPACE
+
+# Create the topics with bitname
 kubectl exec -it broker2 -n $NAMESPACE -- sh
 # In the container terminal
 /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --create --topic repartitioner-uppercase --partitions 3 --replication-factor 1
 /opt/bitnami/kafka/bin/kafka-console-producer.sh --bootstrap-server localhost:9092 --topic repartitioner-uppercase --property parse.key=true --property key.separator=:
-```
 
-#### Install service
-```sh
-# Install
-helm install labs-deploy charts/app -n $NAMESPACE
+# Create the topics with strimzi
+kubectl run kafka-client -ti --image=strimzi/kafka:0.39.0-kafka-3.7.0 --rm=true --restart=Never -n $NAMESPACE -- bash
+/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --create --topic repartitioner-uppercase --partitions 3 --replication-factor 1
+/opt/kafka/bin/kafka-console-producer.sh --bootstrap-server localhost:9092 --topic repartitioner-uppercase --property parse.key=true --property key.separator=:
+
 
 # Checking
 kubectl get pod -n $NAMESPACE
@@ -205,6 +308,8 @@ gcloud container clusters delete "$CLUSTER_NAME" \
   --region="$REGION" \
   --project="$PROJECT_ID" \
   --quiet
+
+gcloud secrets delete $ENV_VARS_SECRET --quiet
 ```
 
 - Install Argo CI /CD
@@ -250,11 +355,26 @@ kubectl port-forward -n splunk-operator svc/splunk-s1-standalone 8000:8000
 
 1. Install services
 ```sh
+
+helm show values oci://registry-1.docker.io/bitnamicharts/kafka | sed -n '/^image:/,/^[^ ]/p'
+
 helm install broker2 charts/broker -n $Namespace
 helm install redis charts/redis -n $Namespace
 helm install kconsumer charts/app -n $Namespace
 ```
 
 
+#### Alternativa (add-on provider: gke)
+
+Si activas el Secret Manager add-on de GKE, puedes saltarte el GSA y dar el rol directamente al KSA así:
+```sh
+gcloud container clusters update "$CLUSTER_NAME" \
+  --location="$REGION" \
+  --enable-secret-manager
+gcloud secrets add-iam-policy-binding SECRET_NAME \
+  --role=roles/secretmanager.secretAccessor \
+  --member=principal://iam.googleapis.com/projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools/${PROJECT_ID}.svc.id.goog/subject/ns/${NAMESPACE}/sa/${KSA_NAME}
 
 
+  
+```

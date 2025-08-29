@@ -27,6 +27,9 @@ spec:
           envFrom:
             - configMapRef:
                 name: {{ include "labs-helmchart-base.buildName" (list . "envcfg") }}
+          env:
+            - name: SPRING_CONFIG_IMPORT
+              value: "optional:file:/etc/secrets/secrets.env"
           volumeMounts:
             - name: env-vars-volume
               mountPath: "/etc/secrets"
@@ -58,7 +61,7 @@ spec:
       volumes:
         - name: env-vars-volume
           csi:
-            driver: secrets-store.csi.k8s.io
+            driver: secrets-store-gke.csi.k8s.io
             readOnly: true
             volumeAttributes:
               secretProviderClass: {{ include "labs-helmchart-base.buildName" (list . "envsp") }}

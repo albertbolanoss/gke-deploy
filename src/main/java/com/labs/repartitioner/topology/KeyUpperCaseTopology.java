@@ -1,5 +1,6 @@
 package com.labs.repartitioner.topology;
 
+import com.labs.repartitioner.constant.TopicEnum;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.common.utils.Bytes;
 import org.apache.kafka.streams.StreamsBuilder;
@@ -30,7 +31,7 @@ public class KeyUpperCaseTopology {
     public Topology createTopology(StreamsBuilder builder) {
 
 
-        KStream<String, String> input = builder.stream("repartitioner-uppercase",
+        KStream<String, String> input = builder.stream(TopicEnum.UPPERCASE.getName(),
                 Consumed.with(Serdes.String(), Serdes.String()));
 
         KStream<String, String> upperKeyStream = input.selectKey(
@@ -49,8 +50,8 @@ public class KeyUpperCaseTopology {
         });
 
         upperKeyStream.toTable(
-                Named.as("uppercase-key-table"),
-                Materialized.<String, String, KeyValueStore<Bytes, byte[]>>as("uppercase-key-store")
+                Named.as(TopicEnum.UPPERCASE_TABLE.getName()),
+                Materialized.<String, String, KeyValueStore<Bytes, byte[]>>as(TopicEnum.UPPERCASE_STORAGE.getName())
                         .withKeySerde(Serdes.String())
                         .withValueSerde(Serdes.String())
         );

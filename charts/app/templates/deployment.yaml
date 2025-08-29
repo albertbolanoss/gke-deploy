@@ -15,6 +15,7 @@ spec:
       labels:
         {{- include "labs-helmchart-base.selector-labels" . | nindent 8 }}
     spec:
+      serviceAccountName: {{ .Values.serviceAccount.name }}
       securityContext:
         {{- toYaml .Values.securityContext | nindent 8 }}
       containers:
