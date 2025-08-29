@@ -15,7 +15,9 @@ spec:
       labels:
         {{- include "labs-helmchart-base.selector-labels" . | nindent 8 }}
     spec:
+      {{- if or (eq .Values.secret.provider "gcp") (eq .Values.secret.provider "gke") }}
       serviceAccountName: {{ .Values.serviceAccount.name }}
+      {{- end }}
       securityContext:
         {{- toYaml .Values.securityContext | nindent 8 }}
       containers:
@@ -55,13 +57,13 @@ spec:
             timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
             failureThreshold: {{ .Values.readinessProbe.failureThreshold }}
             successThreshold: {{ .Values.readinessProbe.successThreshold }}
-      volumes:
-        - name: env-vars-volume
-          csi:
-            driver: secrets-store.csi.k8s.io
-            readOnly: true
-            volumeAttributes:
-              secretProviderClass: {{ include "labs-helmchart-base.buildName" (list . "envsp") }}
+      # volumes:
+      #   - name: env-vars-volume
+      #     csi:
+      #       driver: secrets-store.csi.k8s.io
+      #       readOnly: true
+      #       volumeAttributes:
+      #         secretProviderClass: {{ include "labs-helmchart-base.buildName" (list . "envsp") }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

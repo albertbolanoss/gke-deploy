@@ -1,3 +1,4 @@
 templates/splunkSecret.yaml
 templates/deployment.yaml
 templates/splunkConfig.yaml
+templates/serviceAccount.yaml
