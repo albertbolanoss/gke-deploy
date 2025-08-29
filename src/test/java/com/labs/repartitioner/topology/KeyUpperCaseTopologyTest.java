@@ -1,5 +1,6 @@
 package com.labs.repartitioner.topology;
 
+import com.labs.repartitioner.constant.TopicEnum;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.apache.kafka.streams.StreamsBuilder;
@@ -43,9 +44,9 @@ class KeyUpperCaseTopologyTest {
 
     private KeyValueStore<String, String> keyValueStore;
 
-    private final String INPUT_TOPIC = "repartitioner-uppercase";
+    private final String INPUT_TOPIC = TopicEnum.UPPERCASE.getName();
 
-    private final String STORE_NAME  = "uppercase-key-store";
+    private final String STORE_NAME  = TopicEnum.UPPERCASE_STORAGE.getName();
 
 
     @BeforeEach
