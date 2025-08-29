@@ -41,19 +41,19 @@ docker start redis
 ### Create the topic
 
 ```sh
-# Create the topic repartitioner-uppercase
-docker exec -it broker sh /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --create --topic repartitioner-uppercase
+# Create the topic uppercase
+docker exec -it broker sh /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --create --topic uppercase
 
 # Produce
-/opt/kafka/bin/kafka-console-producer.sh --broker-list localhost:9092 --topic repartitioner-uppercase --property parse.key=true --property key.separator=:
+/opt/kafka/bin/kafka-console-producer.sh --broker-list localhost:9092 --topic uppercase --property parse.key=true --property key.separator=:
 
 # Get the full name of the key store 
-/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list | grep uppercase-key-store
+/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list | grep uppercase-store
 
 # Consume message from ktable
 /opt/kafka/bin/kafka-console-consumer.sh \
   --bootstrap-server localhost:9092 \
-  --topic Repartitioner-uppercase-key-store-changelog \
+  --topic Uppercase-key-store-changelog \
   --from-beginning \
   --property print.key=true \
   --property print.value=true \
@@ -110,7 +110,17 @@ CLUSTER_NAME=labs-kube
 NAMESPACE=labs-dev
 ENV_VARS_SECRET=env-vars-dev
 GSA=labs-sa
+KSA=gke-sa
+PROJECT_NUMBER=230862495170
+CSI_NAMESPACE=csi-secrets
+SECRET_NAME=labs-soft-npd-gke-deploy-dev-envfile
 ```
+#### Enable needed APIs 
+
+```sh
+gcloud services enable container.googleapis.com secretmanager.googleapis.com iam.googleapis.com --project $PROJECT_ID
+```
+
 #### Create Autopilot Cluster
 
 ```sh
@@ -119,17 +129,17 @@ gcloud container clusters create-auto "$CLUSTER_NAME" \
   --region="$REGION" \
   --project="$PROJECT_ID" \
   --release-channel=stable \
-  --enable-workload-identity \
-  --addons=GcpSecretManagerCsiDriver
+  --enable-secret-manager 
 
-  
 # Get credential of kubectl
 gcloud container clusters get-credentials "$CLUSTER_NAME" \
   --region="$REGION" \
   --project="$PROJECT_ID"
 
+kubectl create namespace $NAMESPACE
+
 ```
-#### Create Secret Manager
+#### Create GCP Secret Manager (Values.secret.provider=gke)
 
 ```sh
 gcloud secrets create $ENV_VARS_SECRET \
@@ -138,7 +148,17 @@ gcloud secrets create $ENV_VARS_SECRET \
     --data-file=charts/secrets/secrets.env
 ```
 
-### Create GSA and Grant permision to secret manager
+#### Create Secret in Kubernetes (Values.secret.provider=local)
+
+```sh
+kubectl create secret generic $SECRET_NAME \
+  --from-file=secrets.env=charts/secrets/secrets.env \
+  -n $NAMESPACE
+```
+
+
+#### Create GSA and Grant permision to secret manager using GKE provider (Compatible with Autopilot cluster)
+
 ```sh
 # 1. Crea una cuenta de servicio de Google (GSA) para tu aplicación
 gcloud iam service-accounts create $GSA \
@@ -146,68 +166,106 @@ gcloud iam service-accounts create $GSA \
     --project=$PROJECT_ID
 
 # 2. Otorga el rol de "Secret Manager Secret Accessor" a la GSA
+gcloud secrets add-iam-policy-binding "$ENV_VARS_SECRET" \
+  --project="$PROJECT_ID" \
+  --role="roles/secretmanager.secretAccessor" \
+  --member="principal://iam.googleapis.com/projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/$PROJECT_ID.svc.id.goog/subject/ns/$NAMESPACE/sa/$KSA"
+```
+
+#### Create GSA and Grant permision to secret manager using GCP provider (Compatible with Standard cluster)
+
+```sh
+# 1. Crea una cuenta de servicio de Google (GSA) para tu aplicación
+gcloud iam service-accounts create $GSA \
+    --display-name="Service Account for Labs" \
+    --project=$PROJECT_ID
+
+# 2. Otorga el rol de "Secret Manager Secret Accessor" a la GSA
+
+# using GCP provider
+# 2. Otorga el rol de "Secret Manager Secret Accessor" a la GSA
 gcloud secrets add-iam-policy-binding $ENV_VARS_SECRET \
     --project=$PROJECT_ID \
     --role="roles/secretmanager.secretAccessor" \
     --member="serviceAccount:$GSA@$PROJECT_ID.iam.gserviceaccount.com"
-```
+
+kubectl create serviceaccount $KSA -n $NAMESPACE
+
+# Annotate
+kubectl annotate serviceaccount \
+  --namespace $NAMESPACE \
+  $KSA iam.gke.io/gcp-service-account=$GSA@$PROJECT_ID.iam.gserviceaccount.com
+
+# Link with Workload Identity
+gcloud iam service-accounts add-iam-policy-binding \
+  $GSA@$PROJECT_ID.iam.gserviceaccount.com \
+  --role="roles/iam.workloadIdentityUser" \
+  --member="serviceAccount:$PROJECT_ID.svc.id.goog[$NAMESPACE/$KSA]" \
+  --project $PROJECT_ID -->
+
+# Secrets Store CSI Driver con provider GCP
+
+#3. Install Secret CRDs and Store CSI Driver
+# 3.1 Install repositories
+kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/secrets-store-csi-driver/main/config/crd/bases/secrets-store.csi.x-k8s.io_secretproviderclasses.yaml
+helm repo add secrets-store-csi-driver https://kubernetes-sigs.github.io/secrets-store-csi-driver/charts
+helm repo update 
+
+# Create namespace and install csi driver
+kubectl create namespace $CSI_NAMESPACE
+helm install csi-secrets-store secrets-store-csi-driver/secrets-store-csi-driver --namespace $CSI_NAMESPACE
+
+#Check the CRDs
+kubectl get crds | grep secretproviderclass
+kubectl api-resources | grep -i secretproviderclass
+kubectl explain secretproviderclass
+
+# Install gcp plugins (optional) 
+kubectl apply -f https://raw.githubusercontent.com/GoogleCloudPlatform/secrets-store-csi-driver-provider-gcp/main/deploy/provider-gcp-plugin.yaml --namespace $CSI_NAMESPACE
 
 
-#### Create Kafka Broker and Redis
-
-```sh
-# Create namespace
-kubectl create namespace $NAMESPACE
-
-
-# Install
-helm install broker2 charts/broker -n $NAMESPACE
-helm install redis charts/redis -n $NAMESPACE
-
-# Check the pods status
-kubectl get pod -n $NAMESPACE
-
-# Create the topics
-kubectl exec -it broker2 -n $NAMESPACE -- sh
-# In the container terminal
-/opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --create --topic repartitioner-uppercase --partitions 3 --replication-factor 1
-/opt/bitnami/kafka/bin/kafka-console-producer.sh --bootstrap-server localhost:9092 --topic repartitioner-uppercase --property parse.key=true --property key.separator=:
-```
-
-#### Install service
-```sh
-# Install
-helm install labs-deploy charts/app -n $NAMESPACE
-
-# Checking
-kubectl get pod -n $NAMESPACE
-POD_NAME=$(kubectl get pods -n $NAMESPACE -o jsonpath='{.items[1].metadata.name}')
-kubectl describe pod $POD_NAME -n $NAMESPACE
-kubectl logs -f $POD_NAME -n $NAMESPACE
-
-# port forward
-kubectl port-forward svc/labs-soft-npd-gke-deploy-dev-svc 8080:80 -n $NAMESPACE
-echo "Application accessible at: http://127.0.0.1:8080/actuator/health"
-
-
-kubectl exec -it broker2 -n $NAMESPACE -- sh
-
-/opt/bitnami/kafka/bin/kafka-console-producer.sh \
-  --bootstrap-server localhost:9092 \
-  --topic repartitioner-uppercase \
-  --property "parse.key=true" \
-  --property "key.separator=:"
-```
-
-#### Clean up
-```sh
-gcloud container clusters delete "$CLUSTER_NAME" \
+gcloud container clusters update "$CLUSTER_NAME" \
   --region="$REGION" \
   --project="$PROJECT_ID" \
-  --quiet
+  --release-channel=stable
+
+# secrets-store-csi-driver-xxxxx   Running
+kubectl get pods -n $CSI_NAMESPACE
+
+
+# kubectl create ns $CSI_NAMESPACE
+
+# helm repo add secrets-store-csi-driver https://kubernetes-sigs.github.io/secrets-store-csi-driver/charts
+# helm repo update
+
+# helm install csi secrets-store-csi-driver/secrets-store-csi-driver \
+#   -n $CSI_NAMESPACE \
+#   --set grpcSupportedProviders="gcp"
+
+# gcloud container clusters update "$CLUSTER_NAME" \
+#   --region="$REGION" \
+#   --project="$PROJECT_ID" \
+#   --release-channel=stable
+
+# kubectl get pods -n $CSI_NAMESPACE
 ```
 
-- Install Argo CI /CD
+#### Install dependencies and service
+
+```sh
+# Install dependencies and service
+helm install broker2 charts/broker -n $NAMESPACE
+helm install redis charts/redis -n $NAMESPACE
+helm install labs-deploy charts/app -n $NAMESPACE
+
+# Other way to install bitnami/kafka
+helm repo add strimzi https://strimzi.io/charts/
+helm repo update
+helm install strimzi strimzi/strimzi-kafka-operator -n "$NAMESPACE"
+broker: broker2-kafka-bootstrap.labs-dev.svc.cluster.local:9092
+```
+
+#### Install Argo CI /CD
 
 ```sh
 kubectl create ns argocd
@@ -229,7 +287,7 @@ argocd version
 API: http://localhost:8080
 ```
 
-- Install Splunk
+#### Install Splunk
 
 ```sh
 kubectl create namespace splunk-operator
@@ -247,14 +305,60 @@ kubectl get pods -n splunk-operator
 kubectl port-forward -n splunk-operator svc/splunk-s1-standalone 8000:8000
 ```
 
-
-1. Install services
+#### Clean up
 ```sh
-helm install broker2 charts/broker -n $Namespace
-helm install redis charts/redis -n $Namespace
-helm install kconsumer charts/app -n $Namespace
+gcloud secrets delete $ENV_VARS_SECRET --quiet
+
+gcloud container clusters delete "$CLUSTER_NAME" \
+  --region="$REGION" \
+  --project="$PROJECT_ID" \
+  --quiet
 ```
 
+#### Aditional commands
+
+```sh
+
+# Check the pods status
+kubectl get pod -n $NAMESPACE
+
+kubectl describe pod labs-soft-npd-gke-deploy-dev-deploy-7f75bff4dd-9pjsr -n $NAMESPACE
+
+# Ver que el add-on está habilitado en el cluster
+gcloud container clusters describe "$CLUSTER_NAME" --location "$REGION" \
+  --project "$PROJECT_ID" | grep -A4 secretManagerConfig
+
+# Ver el volumen montado en el Pod
+kubectl exec -it deploy/labs-soft-npd-gke-deploy-dev-deploy -- sh -c 'ls -l /etc/secrets && echo && cat /etc/secrets/secrets.env | sed "s/=.*/=****/g"'
+
+# Create the topics with bitname
+kubectl exec -it broker2 -n $NAMESPACE -- sh
+# In the container terminal
+/opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --create --topic repartitioner-uppercase --partitions 3 --replication-factor 1
+/opt/bitnami/kafka/bin/kafka-console-producer.sh --bootstrap-server localhost:9092 --topic repartitioner-uppercase --property parse.key=true --property key.separator=:
+
+# Create the topics with strimzi
+kubectl run kafka-client -ti --image=strimzi/kafka:0.39.0-kafka-3.7.0 --rm=true --restart=Never -n $NAMESPACE -- bash
+/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --create --topic repartitioner-uppercase --partitions 3 --replication-factor 1
+/opt/kafka/bin/kafka-console-producer.sh --bootstrap-server localhost:9092 --topic repartitioner-uppercase --property parse.key=true --property key.separator=:
 
 
+# Checking
+kubectl get pod -n $NAMESPACE
+POD_NAME=$(kubectl get pods -n $NAMESPACE -o jsonpath='{.items[1].metadata.name}')
+kubectl describe pod $POD_NAME -n $NAMESPACE
+kubectl logs -f $POD_NAME -n $NAMESPACE
 
+# port forward
+kubectl port-forward svc/labs-soft-npd-gke-deploy-dev-svc 8080:80 -n $NAMESPACE
+echo "Application accessible at: http://127.0.0.1:8080/actuator/health"
+
+
+kubectl exec -it broker2 -n $NAMESPACE -- sh
+
+/opt/bitnami/kafka/bin/kafka-console-producer.sh \
+  --bootstrap-server localhost:9092 \
+  --topic repartitioner-uppercase \
+  --property "parse.key=true" \
+  --property "key.separator=:"
+```

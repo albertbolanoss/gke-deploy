@@ -1,5 +1,6 @@
 package com.labs.repartitioner.topology;
 
+import com.labs.repartitioner.constant.TopicEnum;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.common.utils.Bytes;
 import org.apache.kafka.streams.StreamsBuilder;
@@ -11,6 +12,7 @@ import org.apache.kafka.streams.kstream.Named;
 import org.apache.kafka.streams.state.KeyValueStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -18,6 +20,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import java.util.Optional;
 
 @Configuration
+@ConditionalOnProperty(name = "spring.kafka.enabled", havingValue = "true", matchIfMissing = true)
 public class KeyUpperCaseTopology {
     private final RedisTemplate<String, Object> redisTemplate;
     private final Logger log = LoggerFactory.getLogger(KeyUpperCaseTopology.class);
@@ -30,7 +33,7 @@ public class KeyUpperCaseTopology {
     public Topology createTopology(StreamsBuilder builder) {
 
 
-        KStream<String, String> input = builder.stream("repartitioner-uppercase",
+        KStream<String, String> input = builder.stream(TopicEnum.UPPERCASE.getName(),
                 Consumed.with(Serdes.String(), Serdes.String()));
 
         KStream<String, String> upperKeyStream = input.selectKey(
@@ -49,8 +52,8 @@ public class KeyUpperCaseTopology {
         });
 
         upperKeyStream.toTable(
-                Named.as("uppercase-key-table"),
-                Materialized.<String, String, KeyValueStore<Bytes, byte[]>>as("uppercase-key-store")
+                Named.as(TopicEnum.UPPERCASE_TABLE.getName()),
+                Materialized.<String, String, KeyValueStore<Bytes, byte[]>>as(TopicEnum.UPPERCASE_STORAGE.getName())
                         .withKeySerde(Serdes.String())
                         .withValueSerde(Serdes.String())
         );

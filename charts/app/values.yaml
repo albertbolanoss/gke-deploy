@@ -13,7 +13,7 @@ metadata:
 
 image:
   repository: luigisamurai/gkedeploy
-  tag: 0.0.1
+  tag: latest
   pullPolicy: Always
 
 secretManager:
@@ -84,7 +84,7 @@ securityContext: { }
 podSecurityContext: { }
 
 serviceAccount:
-  name: labs-sa
+  name: gke-sa
   project: safari-gke-462517
 
 secret:
