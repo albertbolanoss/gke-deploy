@@ -128,7 +128,7 @@ gcloud services enable container.googleapis.com secretmanager.googleapis.com iam
 gcloud container clusters create-auto "$CLUSTER_NAME" \
   --region="$REGION" \
   --project="$PROJECT_ID" \
-  --release-channel=stable \
+  --release-channel=stable  \
   --enable-secret-manager 
 
 # Get credential of kubectl
@@ -160,10 +160,8 @@ kubectl create secret generic $SECRET_NAME \
 #### Create GSA and Grant permision to secret manager using GKE provider (Compatible with Autopilot cluster)
 
 ```sh
-# 1. Crea una cuenta de servicio de Google (GSA) para tu aplicación
-gcloud iam service-accounts create $GSA \
-    --display-name="Service Account for Labs" \
-    --project=$PROJECT_ID
+# 1. Crea Kubernetes service account
+kubectl -n $NAMESPACE get sa $KSA || kubectl -n $NAMESPACE create sa $KSA
 
 # 2. Otorga el rol de "Secret Manager Secret Accessor" a la GSA
 gcloud secrets add-iam-policy-binding "$ENV_VARS_SECRET" \
@@ -322,6 +320,9 @@ gcloud container clusters delete "$CLUSTER_NAME" \
 # Check the pods status
 kubectl get pod -n $NAMESPACE
 
+helm get manifest labs-deploy -n labs-dev | less
+
+
 kubectl describe pod labs-soft-npd-gke-deploy-dev-deploy-7f75bff4dd-9pjsr -n $NAMESPACE
 
 # Ver que el add-on está habilitado en el cluster
@@ -330,6 +331,13 @@ gcloud container clusters describe "$CLUSTER_NAME" --location "$REGION" \
 
 # Ver el volumen montado en el Pod
 kubectl exec -it deploy/labs-soft-npd-gke-deploy-dev-deploy -- sh -c 'ls -l /etc/secrets && echo && cat /etc/secrets/secrets.env | sed "s/=.*/=****/g"'
+
+# Verifica que el cluster tenga habilitado secret manager
+gcloud container clusters describe "$CLUSTER_NAME" --location "$REGION" \
+  | grep secretManagerConfig -A 4
+ubectl get csidrivers | grep secrets-store-gke
+kubectl -n kube-system get pods -l "k8s-app in (secrets-store-gke, secrets-store-provider-gke)"
+kubectl -n kube-system get ds | grep -E 'secrets-store|provider-gke' || true
 
 # Create the topics with bitname
 kubectl exec -it broker2 -n $NAMESPACE -- sh
