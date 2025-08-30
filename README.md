@@ -128,17 +128,34 @@ gcloud services enable container.googleapis.com secretmanager.googleapis.com iam
 gcloud container clusters create-auto "$CLUSTER_NAME" \
   --region="$REGION" \
   --project="$PROJECT_ID" \
-  --release-channel=stable \
+  --release-channel=stable  \
   --enable-secret-manager 
+```
 
-# Get credential of kubectl
+#### Create Standard Cluster
+
+```sh
+# Create for the region (zones: us-east1-a,us-east1-b, us-east1-c)
+gcloud container clusters create "$CLUSTER_NAME" \
+  --zone "$ZONE" \
+  --machine-type=e2-small \
+  --num-nodes=1 \
+  --disk-size=20 \
+  --image-type=COS_CONTAINERD \
+  --workload-pool="$PROJECT_ID.svc.id.goog" \
+  --monitoring=NONE
+```
+
+#### Get kubectl credential and create namespace
+
+```sh
 gcloud container clusters get-credentials "$CLUSTER_NAME" \
   --region="$REGION" \
   --project="$PROJECT_ID"
 
 kubectl create namespace $NAMESPACE
-
 ```
+
 #### Create GCP Secret Manager (Values.secret.provider=gke)
 
 ```sh
@@ -157,13 +174,11 @@ kubectl create secret generic $SECRET_NAME \
 ```
 
 
-#### Create GSA and Grant permision to secret manager using GKE provider (Compatible with Autopilot cluster)
+#### Create Kubenetes Service Account KSA (Compatible with Autopilot cluster)
 
 ```sh
-# 1. Crea una cuenta de servicio de Google (GSA) para tu aplicación
-gcloud iam service-accounts create $GSA \
-    --display-name="Service Account for Labs" \
-    --project=$PROJECT_ID
+# 1. Crea Kubernetes service account
+kubectl -n $NAMESPACE get sa $KSA || kubectl -n $NAMESPACE create sa $KSA
 
 # 2. Otorga el rol de "Secret Manager Secret Accessor" a la GSA
 gcloud secrets add-iam-policy-binding "$ENV_VARS_SECRET" \
@@ -172,82 +187,51 @@ gcloud secrets add-iam-policy-binding "$ENV_VARS_SECRET" \
   --member="principal://iam.googleapis.com/projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/$PROJECT_ID.svc.id.goog/subject/ns/$NAMESPACE/sa/$KSA"
 ```
 
-#### Create GSA and Grant permision to secret manager using GCP provider (Compatible with Standard cluster)
+#### Create Google Service Account GSA (Compatible with Standard cluster)
 
 ```sh
-# 1. Crea una cuenta de servicio de Google (GSA) para tu aplicación
-gcloud iam service-accounts create $GSA \
-    --display-name="Service Account for Labs" \
-    --project=$PROJECT_ID
-
-# 2. Otorga el rol de "Secret Manager Secret Accessor" a la GSA
-
-# using GCP provider
-# 2. Otorga el rol de "Secret Manager Secret Accessor" a la GSA
-gcloud secrets add-iam-policy-binding $ENV_VARS_SECRET \
-    --project=$PROJECT_ID \
-    --role="roles/secretmanager.secretAccessor" \
-    --member="serviceAccount:$GSA@$PROJECT_ID.iam.gserviceaccount.com"
-
-kubectl create serviceaccount $KSA -n $NAMESPACE
-
-# Annotate
-kubectl annotate serviceaccount \
-  --namespace $NAMESPACE \
-  $KSA iam.gke.io/gcp-service-account=$GSA@$PROJECT_ID.iam.gserviceaccount.com
-
-# Link with Workload Identity
-gcloud iam service-accounts add-iam-policy-binding \
-  $GSA@$PROJECT_ID.iam.gserviceaccount.com \
-  --role="roles/iam.workloadIdentityUser" \
-  --member="serviceAccount:$PROJECT_ID.svc.id.goog[$NAMESPACE/$KSA]" \
-  --project $PROJECT_ID -->
-
-# Secrets Store CSI Driver con provider GCP
-
-#3. Install Secret CRDs and Store CSI Driver
-# 3.1 Install repositories
-kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/secrets-store-csi-driver/main/config/crd/bases/secrets-store.csi.x-k8s.io_secretproviderclasses.yaml
+# 2) Instalar el Secrets Store CSI Driver (OSS) y el provider-gcp
 helm repo add secrets-store-csi-driver https://kubernetes-sigs.github.io/secrets-store-csi-driver/charts
-helm repo update 
+helm repo update
 
-# Create namespace and install csi driver
-kubectl create namespace $CSI_NAMESPACE
-helm install csi-secrets-store secrets-store-csi-driver/secrets-store-csi-driver --namespace $CSI_NAMESPACE
+# Driver
+helm upgrade --install csi-secrets-store secrets-store-csi-driver/secrets-store-csi-driver \
+  --namespace kube-system \
+  --set syncSecret.enabled=true
 
-#Check the CRDs
-kubectl get crds | grep secretproviderclass
-kubectl api-resources | grep -i secretproviderclass
-kubectl explain secretproviderclass
+# Provider GCP
+kubectl apply -n kube-system \
+  -f https://raw.githubusercontent.com/GoogleCloudPlatform/secrets-store-csi-driver-provider-gcp/main/deploy/provider-gcp-plugin.yaml
 
-# Install gcp plugins (optional) 
-kubectl apply -f https://raw.githubusercontent.com/GoogleCloudPlatform/secrets-store-csi-driver-provider-gcp/main/deploy/provider-gcp-plugin.yaml --namespace $CSI_NAMESPACE
+# Verificación
+kubectl -n kube-system get ds | grep -E 'secrets-store|provider-gcp'
+kubectl get csidrivers | grep secrets-store.csi.k8s.io
 
+# KSA (la crea Helm también, pero la anotación requiere conocer el GSA)
+kubectl create serviceaccount "$KSA" -n "$NAMESPACE" || true
 
-gcloud container clusters update "$CLUSTER_NAME" \
-  --region="$REGION" \
-  --project="$PROJECT_ID" \
-  --release-channel=stable
+# GSA
+gcloud iam service-accounts create "$GSA" \
+  --display-name="GSA for Secrets Store CSI" \
+  --project="$PROJECT_ID"
 
-# secrets-store-csi-driver-xxxxx   Running
-kubectl get pods -n $CSI_NAMESPACE
+GSA_EMAIL="${GSA}@${PROJECT_ID}.iam.gserviceaccount.com"
 
+# Permitir que la KSA asuma la identidad de la GSA (Workload Identity)
+gcloud iam service-accounts add-iam-policy-binding "$GSA_EMAIL" \
+  --role roles/iam.workloadIdentityUser \
+  --member "serviceAccount:${PROJECT_ID}.svc.id.goog[${NAMESPACE}/${KSA}]"
 
-# kubectl create ns $CSI_NAMESPACE
+# Anotar la KSA con la GSA
+kubectl annotate serviceaccount -n "$NAMESPACE" "$KSA" \
+  iam.gke.io/gcp-service-account="$GSA_EMAIL" --overwrite
 
-# helm repo add secrets-store-csi-driver https://kubernetes-sigs.github.io/secrets-store-csi-driver/charts
-# helm repo update
+# Dar permiso a la GSA para leer el secreto
+gcloud secrets add-iam-policy-binding env-vars-dev \
+  --project "$PROJECT_ID" \
+  --role roles/secretmanager.secretAccessor \
+  --member "serviceAccount:${GSA_EMAIL}"
 
-# helm install csi secrets-store-csi-driver/secrets-store-csi-driver \
-#   -n $CSI_NAMESPACE \
-#   --set grpcSupportedProviders="gcp"
-
-# gcloud container clusters update "$CLUSTER_NAME" \
-#   --region="$REGION" \
-#   --project="$PROJECT_ID" \
-#   --release-channel=stable
-
-# kubectl get pods -n $CSI_NAMESPACE
 ```
 
 #### Install dependencies and service
@@ -322,6 +306,9 @@ gcloud container clusters delete "$CLUSTER_NAME" \
 # Check the pods status
 kubectl get pod -n $NAMESPACE
 
+helm get manifest labs-deploy -n labs-dev | less
+
+
 kubectl describe pod labs-soft-npd-gke-deploy-dev-deploy-7f75bff4dd-9pjsr -n $NAMESPACE
 
 # Ver que el add-on está habilitado en el cluster
@@ -330,6 +317,13 @@ gcloud container clusters describe "$CLUSTER_NAME" --location "$REGION" \
 
 # Ver el volumen montado en el Pod
 kubectl exec -it deploy/labs-soft-npd-gke-deploy-dev-deploy -- sh -c 'ls -l /etc/secrets && echo && cat /etc/secrets/secrets.env | sed "s/=.*/=****/g"'
+
+# Verifica que el cluster tenga habilitado secret manager
+gcloud container clusters describe "$CLUSTER_NAME" --location "$REGION" \
+  | grep secretManagerConfig -A 4
+kubectl get csidrivers | grep secrets-store-gke
+kubectl -n kube-system get pods -l "k8s-app in (secrets-store-gke, secrets-store-provider-gke)"
+kubectl -n kube-system get ds | grep -E 'secrets-store|provider-gke' || true
 
 # Create the topics with bitname
 kubectl exec -it broker2 -n $NAMESPACE -- sh
