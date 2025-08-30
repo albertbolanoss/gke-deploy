@@ -22,11 +22,11 @@ secretManager:
 
 resources:
   requests:
+    cpu: "100m"
+    memory: "128Mi"
+  limits:
     cpu: "500m"
     memory: "256Mi"
-  limits:
-    cpu: 1
-    memory: "512Mi"
 
 splunk:
   repository: splunk/universalforwarder
@@ -85,5 +85,6 @@ podSecurityContext: { }
 
 gcp:
   serviceAccount: gke-sa
-  secretProvider: gke
+  secretProvider: gcp
+  projectId: safari-gke-462517
 
