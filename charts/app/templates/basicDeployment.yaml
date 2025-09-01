@@ -30,10 +30,21 @@ spec:
           envFrom:
             - configMapRef:
                 name: {{ include "labs-helmchart-base.buildName" (list . "envcfg") }}
-
+          
+          {{- if not .Values.gcp.secretSync.enabled }}
           env:
             - name: SPRING_CONFIG_IMPORT
               value: "optional:file:/etc/secrets/secrets.env"
+          {{- else }}   
+          env:
+           {{- range $secret := .Values.gcp.secretSync.secrets }}
+            - name: {{ $secret.key }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "labs-helmchart-base.buildName" (list $ "sec") }}
+                  key: {{ $secret.key }}
+            {{- end }}
+          {{- end }}   
 
           volumeMounts:
             - name: env-vars-volume

@@ -114,6 +114,7 @@ KSA=gke-sa
 PROJECT_NUMBER=230862495170
 CSI_NAMESPACE=csi-secrets
 SECRET_NAME=labs-soft-npd-gke-deploy-dev-envfile
+REDIS_SECRET=labs-soft-npd-gke-deploy-dev-redis-password
 ```
 #### Enable needed APIs 
 
@@ -136,6 +137,7 @@ gcloud container clusters create-auto "$CLUSTER_NAME" \
 
 ```sh
 # Create for the region (zones: us-east1-a,us-east1-b, us-east1-c)
+# e2-medium , e2-small
 gcloud container clusters create "$CLUSTER_NAME" \
   --zone "$ZONE" \
   --machine-type=e2-small \
@@ -144,6 +146,7 @@ gcloud container clusters create "$CLUSTER_NAME" \
   --image-type=COS_CONTAINERD \
   --workload-pool="$PROJECT_ID.svc.id.goog" \
   --monitoring=NONE
+  --enable-autoscaling --min-nodes 1 --max-nodes 3
 ```
 
 #### Get kubectl credential and create namespace
@@ -156,23 +159,21 @@ gcloud container clusters get-credentials "$CLUSTER_NAME" \
 kubectl create namespace $NAMESPACE
 ```
 
-#### Create GCP Secret Manager (Values.secret.provider=gke)
+#### Create GCP Secret Manager
 
 ```sh
+# if not gcp.secretSync.enabled ()
 gcloud secrets create $ENV_VARS_SECRET \
     --project=$PROJECT_ID \
     --replication-policy="automatic" \
     --data-file=charts/secrets/secrets.env
+
+# if gcp.secretSync.enabled (Sync secrets)
+echo -n 'password' | gcloud secrets create $REDIS_SECRET \
+  --replication-policy="automatic" \
+  --data-file=-
+
 ```
-
-#### Create Secret in Kubernetes (Values.secret.provider=local)
-
-```sh
-kubectl create secret generic $SECRET_NAME \
-  --from-file=secrets.env=charts/secrets/secrets.env \
-  -n $NAMESPACE
-```
-
 
 #### Create Kubenetes Service Account KSA (Compatible with Autopilot cluster)
 
@@ -186,6 +187,22 @@ gcloud secrets add-iam-policy-binding "$ENV_VARS_SECRET" \
   --role="roles/secretmanager.secretAccessor" \
   --member="principal://iam.googleapis.com/projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/$PROJECT_ID.svc.id.goog/subject/ns/$NAMESPACE/sa/$KSA"
 ```
+
+
+#### Create Secret in Kubernetes (Values.secret.provider=local)
+
+```sh
+kubectl create secret generic $SECRET_NAME \
+  --from-file=secrets.env=charts/secrets/secrets.env \
+  -n $NAMESPACE
+
+# to sync secrets
+kubectl create secret generic redis-secret \
+  --from-literal=REDIS_PASSWORD='password' \
+  -n labs-dev
+
+```
+
 
 #### Create Google Service Account GSA (Compatible with Standard cluster)
 
@@ -291,10 +308,20 @@ kubectl port-forward -n splunk-operator svc/splunk-s1-standalone 8000:8000
 
 #### Clean up
 ```sh
+# Delete the secret Managers file
 gcloud secrets delete $ENV_VARS_SECRET --quiet
 
+gcloud secrets delete $REDIS_SECRET --quiet
+
+# Delete Autopilot cluster
 gcloud container clusters delete "$CLUSTER_NAME" \
   --region="$REGION" \
+  --project="$PROJECT_ID" \
+  --quiet
+
+# Delete Standard cluster
+gcloud container clusters delete "$CLUSTER_NAME" \
+  --zone="$ZONE" \
   --project="$PROJECT_ID" \
   --quiet
 ```
