@@ -86,5 +86,11 @@ podSecurityContext: { }
 gcp:
   serviceAccount: gke-sa
   secretProvider: gcp
+  secretSync:
+    enabled: true
+    secrets:
+      - name: redis-password-dev
+        resourceName: "projects/230862495170/secrets/redis-password-dev/versions/latest"
+        key: REDIS_PASSWORD
   projectId: safari-gke-462517
 
