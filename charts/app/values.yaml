@@ -16,10 +16,6 @@ image:
   tag: latest
   pullPolicy: Always
 
-secretManager:
-  envsVars: "projects/230862495170/secrets/env-vars-dev/versions/latest"
-  splunk: "projects/230862495170/secrets/splunk-dev/versions/latest"
-
 resources:
   requests:
     cpu: "100m"
@@ -86,11 +82,14 @@ podSecurityContext: { }
 gcp:
   serviceAccount: gke-sa
   secretProvider: gcp
+  secretFiles:
+    envsVars: "projects/230862495170/secrets/env-vars-dev/versions/latest"
+    splunk: "projects/230862495170/secrets/splunk-dev/versions/latest"
   secretSync:
     enabled: true
     secrets:
-      - name: redis-password-dev
-        resourceName: "projects/230862495170/secrets/redis-password-dev/versions/latest"
+      - name: labs-soft-npd-gke-deploy-dev-redis-password
+        resourceName: "projects/230862495170/secrets/labs-soft-npd-gke-deploy-dev-redis-password/versions/latest"
         key: REDIS_PASSWORD
   projectId: safari-gke-462517
 

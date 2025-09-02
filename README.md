@@ -140,7 +140,7 @@ gcloud container clusters create-auto "$CLUSTER_NAME" \
 # e2-medium , e2-small
 gcloud container clusters create "$CLUSTER_NAME" \
   --zone "$ZONE" \
-  --machine-type=e2-small \
+  --machine-type=e2-medium \
   --num-nodes=1 \
   --disk-size=20 \
   --image-type=COS_CONTAINERD \
@@ -243,11 +243,23 @@ gcloud iam service-accounts add-iam-policy-binding "$GSA_EMAIL" \
 kubectl annotate serviceaccount -n "$NAMESPACE" "$KSA" \
   iam.gke.io/gcp-service-account="$GSA_EMAIL" --overwrite
 
-# Dar permiso a la GSA para leer el secreto
-gcloud secrets add-iam-policy-binding env-vars-dev \
+# Dar permiso a la GSA para leer el secreto secrets.env
+gcloud secrets add-iam-policy-binding $SECRET_NAME \
   --project "$PROJECT_ID" \
   --role roles/secretmanager.secretAccessor \
   --member "serviceAccount:${GSA_EMAIL}"
+
+# Dar permiso a la GSA para leer el secreto individual REDIS_PASSWORD
+gcloud secrets add-iam-policy-binding $REDIS_SECRET \
+  --project "$PROJECT_ID" \
+  --role roles/secretmanager.secretAccessor \
+  --role roles/secretmanager.secretVersionAccessor \
+  --member "serviceAccount:${GSA_EMAIL}"
+
+
+gcloud secrets get-iam-policy $SECRET_NAME --project "$PROJECT_ID"  
+gcloud secrets get-iam-policy $REDIS_SECRET --project "$PROJECT_ID"
+
 
 ```
 
@@ -336,7 +348,7 @@ kubectl get pod -n $NAMESPACE
 helm get manifest labs-deploy -n labs-dev | less
 
 
-kubectl describe pod labs-soft-npd-gke-deploy-dev-deploy-7f75bff4dd-9pjsr -n $NAMESPACE
+kubectl describe pod -n $NAMESPACE
 
 # Ver que el add-on está habilitado en el cluster
 gcloud container clusters describe "$CLUSTER_NAME" --location "$REGION" \
