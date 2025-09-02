@@ -145,7 +145,7 @@ gcloud container clusters create "$CLUSTER_NAME" \
   --disk-size=20 \
   --image-type=COS_CONTAINERD \
   --workload-pool="$PROJECT_ID.svc.id.goog" \
-  --monitoring=NONE
+  --monitoring=NONE \
   --enable-autoscaling --min-nodes 1 --max-nodes 3
 ```
 
