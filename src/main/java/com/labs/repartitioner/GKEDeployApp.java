@@ -7,6 +7,7 @@ import org.springframework.kafka.annotation.EnableKafkaStreams;
 @SpringBootApplication
 @EnableKafkaStreams
 public class GKEDeployApp {
+	
 	public static void main(String[] args) {
 		SpringApplication.run(GKEDeployApp.class, args);
 	}
