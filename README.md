@@ -269,13 +269,11 @@ gcloud secrets add-iam-policy-binding $ENV_VARS_SECRET \
 gcloud secrets add-iam-policy-binding $REDIS_SECRET \
   --project "$PROJECT_ID" \
   --role roles/secretmanager.secretAccessor \
-  --role roles/secretmanager.secretVersionAccessor \
   --member "serviceAccount:${GSA_EMAIL}"
 
 gcloud secrets add-iam-policy-binding $KAFKA_SECRET \
   --project "$PROJECT_ID" \
   --role roles/secretmanager.secretAccessor \
-  --role roles/secretmanager.secretVersionAccessor \
   --member "serviceAccount:${GSA_EMAIL}"
 
 
