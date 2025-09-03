@@ -37,9 +37,8 @@ spec:
           env:
             - name: SPRING_CONFIG_IMPORT
               value: "optional:file:/etc/secrets/secrets.env"
-          {{- end }} 
-          
-          {{- if (and .Values.gcp.secretSyncEnabled .Values.gcp.multiSecretsEnabled (eq .Values.gcp.secretProvider "gcp")) }}
+
+          {{- else if (and .Values.gcp.secretSyncEnabled .Values.gcp.multiSecretsEnabled (eq .Values.gcp.secretProvider "gcp")) }}
           env:
            {{- range $secret := .Values.gcp.secrets.envsVars.multiFiles }}
             - name: {{ $secret.key }}
@@ -48,6 +47,9 @@ spec:
                   name: {{ include "labs-helmchart-base.buildName" (list $ "sec") }}
                   key: {{ $secret.key }}
             {{- end }}
+          
+          {{- else }}
+          command: ["/app/entrypoint.sh"]
           {{- end }}   
 
           volumeMounts:
