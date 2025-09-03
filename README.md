@@ -115,6 +115,7 @@ PROJECT_NUMBER=230862495170
 CSI_NAMESPACE=csi-secrets
 SECRET_NAME=labs-soft-npd-gke-deploy-dev-envfile
 REDIS_SECRET=labs-soft-npd-gke-deploy-dev-redis-password
+KAFKA_SECRET=labs-soft-npd-gke-deploy-dev-kafka-password
 ```
 #### Enable needed APIs 
 
@@ -168,11 +169,16 @@ gcloud secrets create $ENV_VARS_SECRET \
     --replication-policy="automatic" \
     --data-file=charts/secrets/secrets.env
 
-# if gcp.secretSync.enabled (Sync secrets)
+# Individual secrets
 echo -n 'password' | gcloud secrets create $REDIS_SECRET \
   --replication-policy="automatic" \
   --data-file=-
 
+# Individual secrets
+echo -n 'password' | gcloud secrets create $KAFKA_SECRET \
+  --replication-policy="automatic" \
+  --data-file=-
+  
 ```
 
 #### Create Kubenetes Service Account KSA (Compatible with Autopilot cluster)
@@ -186,6 +192,18 @@ gcloud secrets add-iam-policy-binding "$ENV_VARS_SECRET" \
   --project="$PROJECT_ID" \
   --role="roles/secretmanager.secretAccessor" \
   --member="principal://iam.googleapis.com/projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/$PROJECT_ID.svc.id.goog/subject/ns/$NAMESPACE/sa/$KSA"
+
+# ------
+# In case of give acccess to each secret (Multi secret file)
+gcloud secrets add-iam-policy-binding "$REDIS_SECRET" \
+  --project="$PROJECT_ID" \
+  --role="roles/secretmanager.secretAccessor" \
+  --member="principal://iam.googleapis.com/projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/$PROJECT_ID.svc.id.goog/subject/ns/$NAMESPACE/sa/$KSA"
+
+gcloud secrets add-iam-policy-binding "$KAFKA_SECRET" \
+  --project="$PROJECT_ID" \
+  --role="roles/secretmanager.secretAccessor" \
+  --member="principal://iam.googleapis.com/projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/$PROJECT_ID.svc.id.goog/subject/ns/$NAMESPACE/sa/$KSA"  
 ```
 
 
@@ -195,11 +213,6 @@ gcloud secrets add-iam-policy-binding "$ENV_VARS_SECRET" \
 kubectl create secret generic $SECRET_NAME \
   --from-file=secrets.env=charts/secrets/secrets.env \
   -n $NAMESPACE
-
-# to sync secrets
-kubectl create secret generic redis-secret \
-  --from-literal=REDIS_PASSWORD='password' \
-  -n labs-dev
 
 ```
 
@@ -249,8 +262,16 @@ gcloud secrets add-iam-policy-binding $SECRET_NAME \
   --role roles/secretmanager.secretAccessor \
   --member "serviceAccount:${GSA_EMAIL}"
 
+#In case multi secret files
+
 # Dar permiso a la GSA para leer el secreto individual REDIS_PASSWORD
 gcloud secrets add-iam-policy-binding $REDIS_SECRET \
+  --project "$PROJECT_ID" \
+  --role roles/secretmanager.secretAccessor \
+  --role roles/secretmanager.secretVersionAccessor \
+  --member "serviceAccount:${GSA_EMAIL}"
+
+gcloud secrets add-iam-policy-binding $KAFKA_SECRET \
   --project "$PROJECT_ID" \
   --role roles/secretmanager.secretAccessor \
   --role roles/secretmanager.secretVersionAccessor \
@@ -259,7 +280,7 @@ gcloud secrets add-iam-policy-binding $REDIS_SECRET \
 
 gcloud secrets get-iam-policy $SECRET_NAME --project "$PROJECT_ID"  
 gcloud secrets get-iam-policy $REDIS_SECRET --project "$PROJECT_ID"
-
+gcloud secrets get-iam-policy $KAFKA_SECRET --project "$PROJECT_ID"
 
 ```
 
