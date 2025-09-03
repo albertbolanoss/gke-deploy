@@ -8,6 +8,8 @@ SECRET_ENV_PATH="/etc/secrets/secrets.env"
 max_wait=30
 waited=0
 
+echo "Starting Entrypoint."
+
 while [ ! -f "$SECRET_ENV_PATH" ] && [ $waited -lt $max_wait ]; do
   sleep 1
   waited=$((waited + 1))
