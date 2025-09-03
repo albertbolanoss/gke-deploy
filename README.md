@@ -358,6 +358,10 @@ gcloud container clusters delete "$CLUSTER_NAME" \
   --zone="$ZONE" \
   --project="$PROJECT_ID" \
   --quiet
+
+# Delete GSA (for standard cluster)
+gcloud iam service-accounts delete "$GSA@$PROJECT_ID.iam.gserviceaccount.com" \
+  --project="$PROJECT_ID"
 ```
 
 #### Aditional commands
