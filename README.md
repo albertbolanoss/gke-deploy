@@ -108,12 +108,13 @@ ZONE=us-east1-b
 PROJECT_ID=safari-gke-462517
 CLUSTER_NAME=labs-kube
 NAMESPACE=labs-dev
-ENV_VARS_SECRET=env-vars-dev
+
 GSA=labs-sa
 KSA=gke-sa
 PROJECT_NUMBER=230862495170
 CSI_NAMESPACE=csi-secrets
-SECRET_NAME=labs-soft-npd-gke-deploy-dev-envfile
+LOCAL_SECRET_NAME=labs-soft-npd-gke-deploy-dev-envsp
+ENV_VARS_SECRET=env-vars-dev
 REDIS_SECRET=labs-soft-npd-gke-deploy-dev-redis-password
 KAFKA_SECRET=labs-soft-npd-gke-deploy-dev-kafka-password
 ```
@@ -210,7 +211,7 @@ gcloud secrets add-iam-policy-binding "$KAFKA_SECRET" \
 #### Create Secret in Kubernetes (Values.secret.provider=local)
 
 ```sh
-kubectl create secret generic $SECRET_NAME \
+kubectl create secret generic $LOCAL_SECRET_NAME \
   --from-file=secrets.env=charts/secrets/secrets.env \
   -n $NAMESPACE
 
@@ -257,7 +258,7 @@ kubectl annotate serviceaccount -n "$NAMESPACE" "$KSA" \
   iam.gke.io/gcp-service-account="$GSA_EMAIL" --overwrite
 
 # Dar permiso a la GSA para leer el secreto secrets.env
-gcloud secrets add-iam-policy-binding $SECRET_NAME \
+gcloud secrets add-iam-policy-binding $ENV_VARS_SECRET \
   --project "$PROJECT_ID" \
   --role roles/secretmanager.secretAccessor \
   --member "serviceAccount:${GSA_EMAIL}"
@@ -278,7 +279,7 @@ gcloud secrets add-iam-policy-binding $KAFKA_SECRET \
   --member "serviceAccount:${GSA_EMAIL}"
 
 
-gcloud secrets get-iam-policy $SECRET_NAME --project "$PROJECT_ID"  
+gcloud secrets get-iam-policy $ENV_VARS_SECRET --project "$PROJECT_ID"  
 gcloud secrets get-iam-policy $REDIS_SECRET --project "$PROJECT_ID"
 gcloud secrets get-iam-policy $KAFKA_SECRET --project "$PROJECT_ID"
 
@@ -345,6 +346,8 @@ kubectl port-forward -n splunk-operator svc/splunk-s1-standalone 8000:8000
 gcloud secrets delete $ENV_VARS_SECRET --quiet
 
 gcloud secrets delete $REDIS_SECRET --quiet
+
+gcloud secrets delete $KAFKA_SECRET --quiet
 
 # Delete Autopilot cluster
 gcloud container clusters delete "$CLUSTER_NAME" \
