@@ -81,10 +81,10 @@ podSecurityContext: { }
 
 gcp:
   serviceAccount: "gke-sa"
-  secretProvider: "gcp"
+  secretProvider: "gke"
   projectNumber: "230862495170"
-  multiSecretsEnabled: true
-  secretSyncEnabled: true
+  multiSecretsEnabled: false
+  secretSyncEnabled: false
   secrets:
     envsVars:
       secretFile: "env-vars-dev" 
