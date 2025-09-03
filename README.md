@@ -115,6 +115,7 @@ PROJECT_NUMBER=230862495170
 CSI_NAMESPACE=csi-secrets
 SECRET_NAME=labs-soft-npd-gke-deploy-dev-envfile
 REDIS_SECRET=labs-soft-npd-gke-deploy-dev-redis-password
+KAFKA_SECRET=labs-soft-npd-gke-deploy-dev-kafka-password
 ```
 #### Enable needed APIs 
 
@@ -140,7 +141,7 @@ gcloud container clusters create-auto "$CLUSTER_NAME" \
 # e2-medium , e2-small
 gcloud container clusters create "$CLUSTER_NAME" \
   --zone "$ZONE" \
-  --machine-type=e2-small \
+  --machine-type=e2-medium \
   --num-nodes=1 \
   --disk-size=20 \
   --image-type=COS_CONTAINERD \
@@ -168,11 +169,16 @@ gcloud secrets create $ENV_VARS_SECRET \
     --replication-policy="automatic" \
     --data-file=charts/secrets/secrets.env
 
-# if gcp.secretSync.enabled (Sync secrets)
+# Individual secrets
 echo -n 'password' | gcloud secrets create $REDIS_SECRET \
   --replication-policy="automatic" \
   --data-file=-
 
+# Individual secrets
+echo -n 'password' | gcloud secrets create $KAFKA_SECRET \
+  --replication-policy="automatic" \
+  --data-file=-
+  
 ```
 
 #### Create Kubenetes Service Account KSA (Compatible with Autopilot cluster)
@@ -186,6 +192,18 @@ gcloud secrets add-iam-policy-binding "$ENV_VARS_SECRET" \
   --project="$PROJECT_ID" \
   --role="roles/secretmanager.secretAccessor" \
   --member="principal://iam.googleapis.com/projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/$PROJECT_ID.svc.id.goog/subject/ns/$NAMESPACE/sa/$KSA"
+
+# ------
+# In case of give acccess to each secret (Multi secret file)
+gcloud secrets add-iam-policy-binding "$REDIS_SECRET" \
+  --project="$PROJECT_ID" \
+  --role="roles/secretmanager.secretAccessor" \
+  --member="principal://iam.googleapis.com/projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/$PROJECT_ID.svc.id.goog/subject/ns/$NAMESPACE/sa/$KSA"
+
+gcloud secrets add-iam-policy-binding "$KAFKA_SECRET" \
+  --project="$PROJECT_ID" \
+  --role="roles/secretmanager.secretAccessor" \
+  --member="principal://iam.googleapis.com/projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/$PROJECT_ID.svc.id.goog/subject/ns/$NAMESPACE/sa/$KSA"  
 ```
 
 
@@ -195,11 +213,6 @@ gcloud secrets add-iam-policy-binding "$ENV_VARS_SECRET" \
 kubectl create secret generic $SECRET_NAME \
   --from-file=secrets.env=charts/secrets/secrets.env \
   -n $NAMESPACE
-
-# to sync secrets
-kubectl create secret generic redis-secret \
-  --from-literal=REDIS_PASSWORD='password' \
-  -n labs-dev
 
 ```
 
@@ -243,11 +256,31 @@ gcloud iam service-accounts add-iam-policy-binding "$GSA_EMAIL" \
 kubectl annotate serviceaccount -n "$NAMESPACE" "$KSA" \
   iam.gke.io/gcp-service-account="$GSA_EMAIL" --overwrite
 
-# Dar permiso a la GSA para leer el secreto
-gcloud secrets add-iam-policy-binding env-vars-dev \
+# Dar permiso a la GSA para leer el secreto secrets.env
+gcloud secrets add-iam-policy-binding $SECRET_NAME \
   --project "$PROJECT_ID" \
   --role roles/secretmanager.secretAccessor \
   --member "serviceAccount:${GSA_EMAIL}"
+
+#In case multi secret files
+
+# Dar permiso a la GSA para leer el secreto individual REDIS_PASSWORD
+gcloud secrets add-iam-policy-binding $REDIS_SECRET \
+  --project "$PROJECT_ID" \
+  --role roles/secretmanager.secretAccessor \
+  --role roles/secretmanager.secretVersionAccessor \
+  --member "serviceAccount:${GSA_EMAIL}"
+
+gcloud secrets add-iam-policy-binding $KAFKA_SECRET \
+  --project "$PROJECT_ID" \
+  --role roles/secretmanager.secretAccessor \
+  --role roles/secretmanager.secretVersionAccessor \
+  --member "serviceAccount:${GSA_EMAIL}"
+
+
+gcloud secrets get-iam-policy $SECRET_NAME --project "$PROJECT_ID"  
+gcloud secrets get-iam-policy $REDIS_SECRET --project "$PROJECT_ID"
+gcloud secrets get-iam-policy $KAFKA_SECRET --project "$PROJECT_ID"
 
 ```
 
@@ -336,7 +369,7 @@ kubectl get pod -n $NAMESPACE
 helm get manifest labs-deploy -n labs-dev | less
 
 
-kubectl describe pod labs-soft-npd-gke-deploy-dev-deploy-7f75bff4dd-9pjsr -n $NAMESPACE
+kubectl describe pod -n $NAMESPACE
 
 # Ver que el add-on está habilitado en el cluster
 gcloud container clusters describe "$CLUSTER_NAME" --location "$REGION" \

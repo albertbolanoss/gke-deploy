@@ -16,10 +16,6 @@ image:
   tag: latest
   pullPolicy: Always
 
-secretManager:
-  envsVars: "projects/230862495170/secrets/env-vars-dev/versions/latest"
-  splunk: "projects/230862495170/secrets/splunk-dev/versions/latest"
-
 resources:
   requests:
     cpu: "100m"
@@ -84,13 +80,21 @@ securityContext: { }
 podSecurityContext: { }
 
 gcp:
-  serviceAccount: gke-sa
-  secretProvider: gcp
-  secretSync:
-    enabled: true
-    secrets:
-      - name: redis-password-dev
-        resourceName: "projects/230862495170/secrets/redis-password-dev/versions/latest"
-        key: REDIS_PASSWORD
-  projectId: safari-gke-462517
-
+  serviceAccount: "gke-sa"
+  secretProvider: "gke"
+  projectNumber: "230862495170"
+  multiSecretsEnabled: false
+  secretSyncEnabled: false
+  secrets:
+    envsVars:
+      secretFile: "env-vars-dev" 
+      multiFiles:
+        - name: "labs-soft-npd-gke-deploy-dev-redis-password"
+          key: "REDIS_PASSWORD"
+        - name: "labs-soft-npd-gke-deploy-dev-kafka-password"
+          key: "KAFKA_PASSWORD"
+    splunk:
+      secretFile: "splunk-dev" 
+      multiFiles:
+        - name: "ecomm-nxtgen-kafka-coveo-dev-splunk-password"
+          key: "SPLUNK_PASSWORD"

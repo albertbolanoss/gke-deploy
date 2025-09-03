@@ -1,3 +1,4 @@
+{{- $driver := ternary "secrets-store-gke.csi.k8s.io" "secrets-store.csi.k8s.io" (eq .Values.gcp.secretProvider "gke") }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -31,13 +32,16 @@ spec:
             - configMapRef:
                 name: {{ include "labs-helmchart-base.buildName" (list . "envcfg") }}
           
-          {{- if not .Values.gcp.secretSync.enabled }}
+          
+          {{- if (and (not .Values.gcp.secretSyncEnabled) (not .Values.gcp.multiSecretsEnabled)) }}
           env:
             - name: SPRING_CONFIG_IMPORT
               value: "optional:file:/etc/secrets/secrets.env"
-          {{- else }}   
+          {{- end }} 
+          
+          {{- if (and .Values.gcp.secretSyncEnabled .Values.gcp.multiSecretsEnabled (eq .Values.gcp.secretProvider "gcp")) }}
           env:
-           {{- range $secret := .Values.gcp.secretSync.secrets }}
+           {{- range $secret := .Values.gcp.secrets.envsVars.multiFiles }}
             - name: {{ $secret.key }}
               valueFrom:
                 secretKeyRef:
@@ -80,24 +84,17 @@ spec:
             successThreshold: {{ .Values.readinessProbe.successThreshold }}
 
       volumes:
-        {{- if eq .Values.gcp.secretProvider "gcp" }}
+        {{- if or (eq .Values.gcp.secretProvider "gcp") (eq .Values.gcp.secretProvider "gke") }}
         - name: env-vars-volume
           csi:
-            driver: secrets-store.csi.k8s.io
+            driver: {{ $driver | quote }}
             readOnly: true
             volumeAttributes:
-              secretProviderClass: {{ include "labs-helmchart-base.buildName" (list . "envsp") }}
-        {{- else if eq .Values.gcp.secretProvider "gke" }}
-        - name: env-vars-volume
-          csi:
-            driver: secrets-store-gke.csi.k8s.io
-            readOnly: true
-            volumeAttributes:
-              secretProviderClass: {{ include "labs-helmchart-base.buildName" (list . "envsp") }}
+              secretProviderClass: {{ include "labs-helmchart-base.buildName" (list . "envsp") | quote }}
         {{- else }}
         - name: env-vars-volume
           secret:
-            secretName: {{ include "labs-helmchart-base.buildName" (list . "envfile") }}
+            secretName: {{ include "labs-helmchart-base.buildName" (list . "envsp") }}
             defaultMode: 0640
             items:
               - key: secrets.env
