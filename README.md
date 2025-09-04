@@ -243,6 +243,11 @@ kubectl apply -n kube-system \
 kubectl -n kube-system get ds | grep -E 'secrets-store|provider-gcp'
 kubectl get csidrivers | grep secrets-store.csi.k8s.io
 
+# Checking Pods (should be running)
+kubectl get pods -n kube-system | grep csi-secrets-store
+kubectl get pods -n kube-system | grep provider-gcp
+
+
 # KSA (la crea Helm también, pero la anotación requiere conocer el GSA)
 kubectl create serviceaccount "$KSA" -n "$NAMESPACE" || true
 

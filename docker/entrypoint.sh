@@ -1,4 +1,3 @@
-
 #!/bin/bash
 
 set -e
@@ -11,21 +10,21 @@ waited=0
 
 echo "Starting Entrypoint."
 
-# wait until almost one file exist
+# wait until at least one file exists (any file, not just .env)
 while [ -z "$(ls -A "$SECRETS_DIR" 2>/dev/null)" ] && [ $waited -lt $max_wait ]; do
   sleep 1
   waited=$((waited + 1))
   echo "Waiting for secrets to be mounted..."
 done
 if [ -z "$(ls -A "$SECRETS_DIR" 2>/dev/null)" ]; then
-  echo "ERROR: No secrets found in $SECRETS_DIR after $max_wait seconds."
+  echo "INFO: No secrets found in $SECRETS_DIR after $max_wait seconds."
   exit 1
 fi
 
 # Create the tmp/cleaned_secrets folder
 mkdir -p "$TEMP_DIR"
 
-# Sanitizing an load the environment variables
+# Sanitizing and loading the environment variables
 load_env_from_file() {
   local secret_file="$1"
   local cleaned_file="$TEMP_DIR/$(basename "$secret_file")"
@@ -39,10 +38,12 @@ load_env_from_file() {
   set +a
 }
 
-# Process each found file in /etc/secrets
-for secret_file in "$SECRETS_DIR"/*; do
+# Enable nullglob so that the loop is skipped if no .env files exist
+shopt -s nullglob
+for secret_file in "$SECRETS_DIR"/*.env; do
   [ -f "$secret_file" ] && load_env_from_file "$secret_file"
 done
+shopt -u nullglob
 
 echo "Starting Java application"
 exec java -jar "/app/${JAR_NAME}.jar" "$@"
