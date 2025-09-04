@@ -108,7 +108,6 @@ ZONE=us-east1-b
 PROJECT_ID=safari-gke-462517
 CLUSTER_NAME=labs-kube
 NAMESPACE=labs-dev
-
 GSA=labs-sa
 KSA=gke-sa
 PROJECT_NUMBER=230862495170
@@ -117,6 +116,7 @@ LOCAL_SECRET_NAME=labs-soft-npd-gke-deploy-dev-envsp
 ENV_VARS_SECRET=env-vars-dev
 REDIS_SECRET=labs-soft-npd-gke-deploy-dev-redis-password
 KAFKA_SECRET=labs-soft-npd-gke-deploy-dev-kafka-password
+SECRET_PROVIDER=gke
 ```
 #### Enable needed APIs 
 
@@ -170,16 +170,28 @@ gcloud secrets create $ENV_VARS_SECRET \
     --replication-policy="automatic" \
     --data-file=charts/secrets/secrets.env
 
-# Individual secrets
+# Individual secrets as text
 echo -n 'password' | gcloud secrets create $REDIS_SECRET \
   --replication-policy="automatic" \
   --data-file=-
 
-# Individual secrets
+# Individual secrets as text
 echo -n 'password' | gcloud secrets create $KAFKA_SECRET \
   --replication-policy="automatic" \
   --data-file=-
-  
+
+# Individual secrets as file
+gcloud secrets create $REDIS_SECRET \
+    --project=$PROJECT_ID \
+    --replication-policy="automatic" \
+    --data-file=charts/secrets/$SECRET_PROVIDER/$REDIS_SECRET
+
+# Individual secrets as file
+gcloud secrets create $KAFKA_SECRET \
+    --project=$PROJECT_ID \
+    --replication-policy="automatic" \
+    --data-file=charts/secrets/$SECRET_PROVIDER/$KAFKA_SECRET
+
 ```
 
 #### Create Kubenetes Service Account KSA (Compatible with Autopilot cluster)
