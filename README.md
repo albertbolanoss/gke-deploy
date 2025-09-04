@@ -116,7 +116,7 @@ LOCAL_SECRET_NAME=labs-soft-npd-gke-deploy-dev-envsp
 ENV_VARS_SECRET=env-vars-dev
 REDIS_SECRET=labs-soft-npd-gke-deploy-dev-redis-password
 KAFKA_SECRET=labs-soft-npd-gke-deploy-dev-kafka-password
-SECRET_PROVIDER=gke
+SECRET_PROVIDER=gcp
 ```
 #### Enable needed APIs 
 
@@ -179,19 +179,6 @@ echo -n 'password' | gcloud secrets create $REDIS_SECRET \
 echo -n 'password' | gcloud secrets create $KAFKA_SECRET \
   --replication-policy="automatic" \
   --data-file=-
-
-# Individual secrets as file
-gcloud secrets create $REDIS_SECRET \
-    --project=$PROJECT_ID \
-    --replication-policy="automatic" \
-    --data-file=charts/secrets/$SECRET_PROVIDER/$REDIS_SECRET
-
-# Individual secrets as file
-gcloud secrets create $KAFKA_SECRET \
-    --project=$PROJECT_ID \
-    --replication-policy="automatic" \
-    --data-file=charts/secrets/$SECRET_PROVIDER/$KAFKA_SECRET
-
 ```
 
 #### Create Kubenetes Service Account KSA (Compatible with Autopilot cluster)
@@ -217,6 +204,12 @@ gcloud secrets add-iam-policy-binding "$KAFKA_SECRET" \
   --project="$PROJECT_ID" \
   --role="roles/secretmanager.secretAccessor" \
   --member="principal://iam.googleapis.com/projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/$PROJECT_ID.svc.id.goog/subject/ns/$NAMESPACE/sa/$KSA"  
+
+# Checking
+gcloud secrets get-iam-policy $ENV_VARS_SECRET --project "$PROJECT_ID"  
+gcloud secrets get-iam-policy $REDIS_SECRET --project "$PROJECT_ID"
+gcloud secrets get-iam-policy $KAFKA_SECRET --project "$PROJECT_ID"
+
 ```
 
 
@@ -385,8 +378,15 @@ kubectl get pod -n $NAMESPACE
 
 helm get manifest labs-deploy -n labs-dev | less
 
-
 kubectl describe pod -n $NAMESPACE
+
+kubectl logs -f -n $NAMESPACE labs-soft-npd-gke-deploy-dev-deploy-6557f9d565-rc7zc
+
+kubectl exec -it -n $NAMESPACE labs-soft-npd-gke-deploy-dev-deploy-6557f9d565-rc7zc -- sh
+
+helm uninstall labs-deploy -n $NAMESPACE
+
+kubectl get events -n $NAMESPACE
 
 # Ver que el add-on está habilitado en el cluster
 gcloud container clusters describe "$CLUSTER_NAME" --location "$REGION" \
