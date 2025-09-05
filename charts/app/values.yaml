@@ -13,7 +13,7 @@ metadata:
 
 image:
   repository: luigisamurai/gkedeploy
-  tag: latest
+  tag: "sha-2e74dc3"
   pullPolicy: Always
 
 resources:
@@ -81,20 +81,21 @@ podSecurityContext: { }
 
 gcp:
   serviceAccount: "gke-sa"
-  secretProvider: "gke"
+  secretProvider: "gcp"
   projectNumber: "230862495170"
-  multiSecretsEnabled: false
-  secretSyncEnabled: false
+  secretSyncEnabled: true
   secrets:
     envsVars:
-      secretFile: "env-vars-dev" 
-      multiFiles:
-        - name: "labs-soft-npd-gke-deploy-dev-redis-password"
-          key: "REDIS_PASSWORD"
-        - name: "labs-soft-npd-gke-deploy-dev-kafka-password"
-          key: "KAFKA_PASSWORD"
+      - name: "labs-soft-npd-gke-deploy-dev-redis-password" 
+        fileName: "labs-soft-npd-gke-deploy-dev-redis-password"
+        key: "REDIS_PASSWORD"
+        envVar: "REDIS_PASSWORD"
+      - name: "labs-soft-npd-gke-deploy-dev-kafka-password" 
+        fileName: "labs-soft-npd-gke-deploy-dev-kafka-password"
+        key: "KAFKA_PASSWORD"
+        envVar: "KAFKA_PASSWORD"
     splunk:
-      secretFile: "splunk-dev" 
-      multiFiles:
-        - name: "ecomm-nxtgen-kafka-coveo-dev-splunk-password"
-          key: "SPLUNK_PASSWORD"
+      - name: "splunk-dev"
+        fileName: "splunk.env"
+        key: ""
+        envVar: ""

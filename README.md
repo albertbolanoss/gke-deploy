@@ -116,8 +116,9 @@ LOCAL_SECRET_NAME=labs-soft-npd-gke-deploy-dev-envsp
 ENV_VARS_SECRET=env-vars-dev
 REDIS_SECRET=labs-soft-npd-gke-deploy-dev-redis-password
 KAFKA_SECRET=labs-soft-npd-gke-deploy-dev-kafka-password
-SECRET_PROVIDER=gcp
+GSA_EMAIL="${GSA}@${PROJECT_ID}.iam.gserviceaccount.com"
 ```
+
 #### Enable needed APIs 
 
 ```sh
@@ -164,21 +165,45 @@ kubectl create namespace $NAMESPACE
 #### Create GCP Secret Manager
 
 ```sh
-# if not gcp.secretSync.enabled ()
+# Note: create the resources according to the deploy configuration (values.yaml):
+# gcp:
+#   serviceAccount: "[Service account name]"
+#   secretProvider: "[gke | gcp]"
+#   projectNumber: "[The secret manager project number]"
+#   secretSyncEnabled: [for gcp enable por disable secrect sync]
+#   secrets:
+#     envsVars:
+#       - name: "[Secret name]" 
+#         key: "[For GCP Sync the key]"
+#         fileName: "[Volume secret file to mount]"
+
+# Upload file with several environment vars (secretProvider: gke | secretProvider: gcp and secretSyncEnabled: false)
 gcloud secrets create $ENV_VARS_SECRET \
     --project=$PROJECT_ID \
     --replication-policy="automatic" \
     --data-file=charts/secrets/secrets.env
 
-# Individual secrets as text
+
+# Individual secrets as text for GCP with Sync (secretProvider: gcp and secretSyncEnabled: true)
 echo -n 'password' | gcloud secrets create $REDIS_SECRET \
   --replication-policy="automatic" \
   --data-file=-
 
-# Individual secrets as text
+# Individual secrets as text  for GCP with Sync (secretProvider: gcp and secretSyncEnabled: true)
 echo -n 'password' | gcloud secrets create $KAFKA_SECRET \
   --replication-policy="automatic" \
   --data-file=-
+
+# Individual secrets as text for GKE and GCP without Sync (secretProvider: gcp | gke and secretSyncEnabled: false)
+echo -n 'REDIS_SECRET=password' | gcloud secrets create $REDIS_SECRET \
+  --replication-policy="automatic" \
+  --data-file=-
+
+# Individual secrets as text  for GKE and GCP without Sync (secretProvider: gcp | gke and secretSyncEnabled: false)
+echo -n 'KAFKA_SECRET=password' | gcloud secrets create $KAFKA_SECRET \
+  --replication-policy="automatic" \
+  --data-file=-
+
 ```
 
 #### Create Kubenetes Service Account KSA (Compatible with Autopilot cluster)
