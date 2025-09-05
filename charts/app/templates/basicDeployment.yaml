@@ -41,12 +41,12 @@ spec:
                   name: {{ include "labs-helmchart-base.buildName" (list $ "sec") }}
                   key: {{ $secret.key }}
             {{- end }}
-          {{- else }}
+          {{- end }}
+
           volumeMounts:
             - name: env-vars-volume
               mountPath: "/etc/secrets"
               readOnly: true
-          {{- end }}
 
           securityContext:
             {{- toYaml .Values.podSecurityContext | nindent 12 }}

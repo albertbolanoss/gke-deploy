@@ -83,13 +83,17 @@ gcp:
   serviceAccount: "gke-sa"
   secretProvider: "gcp"
   projectNumber: "230862495170"
-  secretSyncEnabled: false
+  secretSyncEnabled: true
   secrets:
     envsVars:
-      - name: "env-vars-dev" 
-        fileName: "secrets.env"
-        key: ""
-        envVar: ""
+      - name: "labs-soft-npd-gke-deploy-dev-redis-password" 
+        fileName: "labs-soft-npd-gke-deploy-dev-redis-password"
+        key: "REDIS_PASSWORD"
+        envVar: "REDIS_PASSWORD"
+      - name: "labs-soft-npd-gke-deploy-dev-kafka-password" 
+        fileName: "labs-soft-npd-gke-deploy-dev-kafka-password"
+        key: "KAFKA_PASSWORD"
+        envVar: "KAFKA_PASSWORD"
     splunk:
       - name: "splunk-dev"
         fileName: "splunk.env"
