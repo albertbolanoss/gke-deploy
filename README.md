@@ -116,6 +116,7 @@ LOCAL_SECRET_NAME=labs-soft-npd-gke-deploy-dev-envsp
 ENV_VARS_SECRET=env-vars-dev
 REDIS_SECRET=labs-soft-npd-gke-deploy-dev-redis-password
 KAFKA_SECRET=labs-soft-npd-gke-deploy-dev-kafka-password
+GSA_EMAIL="${GSA}@${PROJECT_ID}.iam.gserviceaccount.com"
 ```
 
 #### Enable needed APIs 
@@ -182,17 +183,6 @@ gcloud secrets create $ENV_VARS_SECRET \
     --replication-policy="automatic" \
     --data-file=charts/secrets/secrets.env
 
-# For GCP with Sync
-gcloud secrets create $REDIS_SECRET \
-    --project=$PROJECT_ID \
-    --replication-policy="automatic" \
-    --data-file=charts/secrets/redis
-
-# For GCP with Sync
-gcloud secrets create $KAFKA_SECRET \
-    --project=$PROJECT_ID \
-    --replication-policy="automatic" \
-    --data-file=charts/secrets/kafka
 
 # Individual secrets as text for GCP with Sync (secretProvider: gcp and secretSyncEnabled: true)
 echo -n 'password' | gcloud secrets create $REDIS_SECRET \
