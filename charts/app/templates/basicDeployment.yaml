@@ -35,18 +35,18 @@ spec:
           {{- if (and .Values.gcp.secretSyncEnabled (eq .Values.gcp.secretProvider "gcp")) }}
           env:
            {{- range $secret := .Values.gcp.secrets.envsVars }}
-            - name: {{ $secret.key }}
+            - name: {{ $secret.envVar }}
               valueFrom:
                 secretKeyRef:
                   name: {{ include "labs-helmchart-base.buildName" (list $ "sec") }}
                   key: {{ $secret.key }}
             {{- end }}
-          {{- end }}
-
+          {{- else }}
           volumeMounts:
             - name: env-vars-volume
               mountPath: "/etc/secrets"
               readOnly: true
+          {{- end }}
 
           securityContext:
             {{- toYaml .Values.podSecurityContext | nindent 12 }}

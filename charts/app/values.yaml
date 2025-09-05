@@ -87,9 +87,11 @@ gcp:
   secrets:
     envsVars:
       - name: "env-vars-dev" 
-        key: "SECRETS"
         fileName: "secrets.env"
+        key: ""
+        envVar: ""
     splunk:
       - name: "splunk-dev"
-        key: "SPLUNK"
         fileName: "splunk.env"
+        key: ""
+        envVar: ""
