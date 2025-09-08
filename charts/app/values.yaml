@@ -81,21 +81,21 @@ podSecurityContext: { }
 
 gcp:
   serviceAccount: "gke-sa"
-  secretProvider: "gcp"
   projectNumber: "230862495170"
-  secretSyncEnabled: true
-  secrets:
+  secretManager:
     envsVars:
-      - name: "labs-soft-npd-gke-deploy-dev-redis-password" 
-        fileName: "labs-soft-npd-gke-deploy-dev-redis-password"
-        key: "REDIS_PASSWORD"
-        envVar: "REDIS_PASSWORD"
-      - name: "labs-soft-npd-gke-deploy-dev-kafka-password" 
-        fileName: "labs-soft-npd-gke-deploy-dev-kafka-password"
-        key: "KAFKA_PASSWORD"
-        envVar: "KAFKA_PASSWORD"
+      secretProvider: "gke"
+      secretSyncEnabled: false
+      secrets:
+        - name: "env-vars-dev" 
+          fileName: "env-vars-dev.env"
+          key: ""
+          envVar: ""
     splunk:
-      - name: "splunk-dev"
-        fileName: "splunk.env"
-        key: ""
-        envVar: ""
+      secretProvider: "gke"
+      secretSyncEnabled: false
+      secrets:
+        - name: "splunk-dev"
+          fileName: "splunk.env"
+          key: ""
+          envVar: ""
