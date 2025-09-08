@@ -1,4 +1,4 @@
-{{- $driver := ternary "secrets-store-gke.csi.k8s.io" "secrets-store.csi.k8s.io" (eq .Values.gcp.secretProvider "gke") }}
+{{- $driver := ternary "secrets-store-gke.csi.k8s.io" "secrets-store.csi.k8s.io" (eq .Values.gcp.secretManager.envsVars.secretProvider "gke") }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -32,7 +32,7 @@ spec:
             - configMapRef:
                 name: {{ include "labs-helmchart-base.buildName" (list . "envcfg") }}
 
-          {{- if (and .Values.gcp.secretSyncEnabled (eq .Values.gcp.secretProvider "gcp")) }}
+          {{- if (and .Values.gcp.secretManager.envsVars.secretSyncEnabled (eq .Values.gcp.secretManager.envsVars.secretProvider "gcp")) }}
           env:
            {{- range $secret := .Values.gcp.secrets.envsVars }}
             - name: {{ $secret.envVar }}
@@ -77,7 +77,7 @@ spec:
             successThreshold: {{ .Values.readinessProbe.successThreshold }}
 
       volumes:
-        {{- if or (eq .Values.gcp.secretProvider "gcp") (eq .Values.gcp.secretProvider "gke") }}
+        {{- if or (eq .Values.gcp.secretManager.envsVars.secretProvider "gcp") (eq .Values.gcp.secretManager.envsVars.secretProvider "gke") }}
         - name: env-vars-volume
           csi:
             driver: {{ $driver | quote }}

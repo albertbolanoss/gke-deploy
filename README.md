@@ -79,8 +79,8 @@ docker run --name gkedeploy \
 
 ## Gcloud commands
 
-| Declaration                                                                 | Description                                                      |
-|-----------------------------------------------------------------------------|------------------------------------------------------------------|
+| Declaration                                                                   | Description                                                      |
+| ----------------------------------------------------------------------------- | ---------------------------------------------------------------- |
 | `gcloud init`                                                               | Init the gcloud configuration.                                   |
 | `gcloud config list`                                                        | Check the registered of account.                                 |
 | `gcloud auth list`                                                          | show the account and how to switch.                              |
@@ -93,8 +93,6 @@ docker run --name gkedeploy \
 | `gcloud container clusters get-credentials labs-kube --region us-central1`  | Get the credential to register cloud cluster in kubectl context. |
 | `kubectl config delete-context gke_safari-gke-462517_us-central1_labs-kube` | Delete the context.                                              |
 | `gcloud config set compute/region us-east1 `                                | Change the region.                                               |
-
-
 
 ## Deploying in GKE
 
@@ -119,7 +117,7 @@ KAFKA_SECRET=labs-soft-npd-gke-deploy-dev-kafka-password
 GSA_EMAIL="${GSA}@${PROJECT_ID}.iam.gserviceaccount.com"
 ```
 
-#### Enable needed APIs 
+#### Enable needed APIs
 
 ```sh
 gcloud services enable container.googleapis.com secretmanager.googleapis.com iam.googleapis.com --project $PROJECT_ID
@@ -168,14 +166,15 @@ kubectl create namespace $NAMESPACE
 # Note: create the resources according to the deploy configuration (values.yaml):
 # gcp:
 #   serviceAccount: "[Service account name]"
-#   secretProvider: "[gke | gcp]"
 #   projectNumber: "[The secret manager project number]"
-#   secretSyncEnabled: [for gcp enable por disable secrect sync]
-#   secrets:
+#   secretManager:
 #     envsVars:
-#       - name: "[Secret name]" 
-#         key: "[For GCP Sync the key]"
-#         fileName: "[Volume secret file to mount]"
+#       secretProvider: "[gke | gcp]"
+#       secretSyncEnabled: [for gcp enable por disable secrect sync]
+#       secrets:
+#         - name: "[Secret name]" 
+#           key: "[For GCP Sync the key]"
+#           fileName: "[Volume secret file to mount]"
 
 # Upload file with several environment vars (secretProvider: gke | secretProvider: gcp and secretSyncEnabled: false)
 gcloud secrets create $ENV_VARS_SECRET \
@@ -237,7 +236,6 @@ gcloud secrets get-iam-policy $KAFKA_SECRET --project "$PROJECT_ID"
 
 ```
 
-
 #### Create Secret in Kubernetes (Values.secret.provider=local)
 
 ```sh
@@ -246,7 +244,6 @@ kubectl create secret generic $LOCAL_SECRET_NAME \
   -n $NAMESPACE
 
 ```
-
 
 #### Create Google Service Account GSA (Compatible with Standard cluster)
 
@@ -374,6 +371,7 @@ kubectl port-forward -n splunk-operator svc/splunk-s1-standalone 8000:8000
 ```
 
 #### Clean up
+
 ```sh
 # Delete the secret Managers file
 gcloud secrets delete $ENV_VARS_SECRET --quiet
