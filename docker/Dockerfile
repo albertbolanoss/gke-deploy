@@ -12,4 +12,4 @@ COPY docker/${JAR_NAME}.jar /app/${JAR_NAME}.jar
 
 EXPOSE ${APP_PORT}
 
-ENTRYPOINT ["sh", "/app/entrypoint.sh"]
+ENTRYPOINT ["/bin/bash", "/app/entrypoint.sh"]
