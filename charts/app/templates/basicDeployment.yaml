@@ -42,7 +42,6 @@ spec:
                   key: {{ $secret.key }}
             {{- end }}
           {{- end }}
-
           volumeMounts:
             - name: env-vars-volume
               mountPath: "/etc/secrets"
