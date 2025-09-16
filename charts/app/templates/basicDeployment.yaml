@@ -42,6 +42,14 @@ spec:
                   key: {{ $secret.key }}
             {{- end }}
           {{- end }}
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              echo "Verifying secrets..." &&
+              ls -l /etc/secrets/ &&
+              . /etc/secrets/secrets.env &&
+              export $(cut -d= -f1 /etc/secrets/secrets.env) &&
+              exec java -jar /app/gke_deploy.jar
           volumeMounts:
             - name: env-vars-volume
               mountPath: "/etc/secrets"

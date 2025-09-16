@@ -11,5 +11,3 @@ RUN sh -c "touch ./${JAR_NAME}.jar"
 
 EXPOSE ${APP_PORT}
 
-ENTRYPOINT ["/bin/sh", "-c", "echo 'Verifying secrets...' && ls -l /etc/secrets/ && echo 'Starting application...' && . /etc/secrets/secrets.env && exec java -jar /app/${JAR_NAME}.jar"]
-
