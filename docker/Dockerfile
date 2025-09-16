@@ -5,11 +5,12 @@ ENV APP_PORT=9081
 
 WORKDIR /app
 
-COPY --chmod=0755 docker/entrypoint.sh /app/entrypoint.sh
-COPY docker/${JAR_NAME}.jar /app/${JAR_NAME}.jar
-# the next line is just because the pipeline is requesting this file
-#COPY docker/application.yml /tmp/application.yml
+COPY ${JAR_NAME}.jar /app/${JAR_NAME}.jar
+
+RUN sh -c "touch ./${JAR_NAME}.jar"
 
 EXPOSE ${APP_PORT}
 
-ENTRYPOINT ["/bin/bash", "/app/entrypoint.sh"]
+RUN ls -l /etc/secrets
+
+ENTRYPOINT ["/bin/sh", "-c", "echo 'Verifying secrets...' && ls -l /etc/secrets/ && echo 'Starting application...' && . /etc/secrets/secrets.env && exec java -jar /app/${JAR_NAME}.jar"]

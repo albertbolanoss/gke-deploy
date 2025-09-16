@@ -9,4 +9,4 @@ data:
   "SPRING_PROFILES_ACTIVE": "{{ .Values.environment }}"
   "KAFKA_BOOTSTRAP_SERVERS": {{ .Values.envs.kafkaBootstrapServers | quote }}
   "REDIS_HOST": {{ .Values.envs.redisHost | quote }}
-  "SPRING_CONFIG_LOCATION": "classpath:/application.yaml,classpath:/application-{{ .Values.environment }}.yaml"
+  "ssl_bundle_redis": {{ .Values.envs.sslBundleRedis | quote }}
