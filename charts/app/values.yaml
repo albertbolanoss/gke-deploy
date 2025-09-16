@@ -68,6 +68,7 @@ envs:
   splunkServer: "lpec5009spkdm01.cardinalhealth.net"
   splunkUser: "root"
   splunkCmd: "add monitor /var/log -index ecomm_nxtgen_non-prod"
+  sslBundleRedis: "/etc/secrets/redis-cacert.pem"
 
 nodeSelector: {}
 
@@ -84,15 +85,19 @@ gcp:
   projectNumber: "230862495170"
   secretManager:
     envsVars:
-      secretProvider: "gke"
+      secretProvider: "gcp"
       secretSyncEnabled: false
       secrets:
         - name: "env-vars-dev" 
           fileName: "env-vars-dev.env"
           key: ""
           envVar: ""
+        - name: "ecomm-nxtgen-searchindexer-cache-ssl-pem"
+          fileName: "redis-cacert.pem"
+          key: ""
+          envVar: ""
     splunk:
-      secretProvider: "gke"
+      secretProvider: "gcp"
       secretSyncEnabled: false
       secrets:
         - name: "splunk-dev"
