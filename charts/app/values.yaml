@@ -92,7 +92,7 @@ gcp:
           fileName: "env-vars-dev.env"
           key: ""
           envVar: ""
-        - name: "ecomm-nxtgen-searchindexer-cache-ssl-pem"
+        - name: "cache-ssl-pem"
           fileName: "redis-cacert.pem"
           key: ""
           envVar: ""

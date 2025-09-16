@@ -114,6 +114,7 @@ LOCAL_SECRET_NAME=labs-soft-npd-gke-deploy-dev-envsp
 ENV_VARS_SECRET=env-vars-dev
 REDIS_SECRET=labs-soft-npd-gke-deploy-dev-redis-password
 KAFKA_SECRET=labs-soft-npd-gke-deploy-dev-kafka-password
+REDIS_CACERT=cache-ssl-pem
 GSA_EMAIL="${GSA}@${PROJECT_ID}.iam.gserviceaccount.com"
 ```
 
@@ -182,6 +183,10 @@ gcloud secrets create $ENV_VARS_SECRET \
     --replication-policy="automatic" \
     --data-file=charts/secrets/secrets.env
 
+gcloud secrets create $REDIS_CACERT \
+    --project=$PROJECT_ID \
+    --replication-policy="automatic" \
+    --data-file=charts/secrets/redis-cacert.pem
 
 # Individual secrets as text for GCP with Sync (secretProvider: gcp and secretSyncEnabled: true)
 echo -n 'password' | gcloud secrets create $REDIS_SECRET \
@@ -294,6 +299,13 @@ gcloud secrets add-iam-policy-binding $ENV_VARS_SECRET \
   --project "$PROJECT_ID" \
   --role roles/secretmanager.secretAccessor \
   --member "serviceAccount:${GSA_EMAIL}"
+
+# Dar permiso a redis cacert
+gcloud secrets add-iam-policy-binding $REDIS_CACERT \
+  --project "$PROJECT_ID" \
+  --role roles/secretmanager.secretAccessor \
+  --member "serviceAccount:${GSA_EMAIL}"
+
 
 #In case multi secret files
 
