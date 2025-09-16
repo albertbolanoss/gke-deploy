@@ -13,7 +13,7 @@ metadata:
 
 image:
   repository: luigisamurai/gkedeploy
-  tag: "sha-2e74dc3"
+  tag: "testlabsdeploy004"
   pullPolicy: Always
 
 resources:
@@ -89,7 +89,7 @@ gcp:
       secretSyncEnabled: false
       secrets:
         - name: "env-vars-dev" 
-          fileName: "env-vars-dev.env"
+          fileName: "secrets.env"
           key: ""
           envVar: ""
         - name: "cache-ssl-pem"

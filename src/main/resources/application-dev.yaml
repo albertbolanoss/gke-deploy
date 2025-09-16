@@ -1,5 +1,5 @@
 server:
-  port: 9082
+  port: 9081
 spring:
   application:
     name: LABS_GKE_DEPLOY
