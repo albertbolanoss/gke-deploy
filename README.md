@@ -64,9 +64,9 @@ docker exec -it broker sh /opt/kafka/bin/kafka-topics.sh --bootstrap-server loca
 ### Build Docker application Image
 
 ```sh
-docker build -f docker/Dockerfile -t gkedeploy:0.0.1 .
-docker tag gkedeploy:0.0.1 luigisamurai/gkedeploy:0.0.1
-docker push luigisamurai/gkedeploy:0.0.1
+docker build -f docker/Dockerfile -t gkedeploy:latest .
+docker tag gkedeploy:latest luigisamurai/gkedeploy:latest
+docker push luigisamurai/gkedeploy:latest
 
 docker run --name gkedeploy \
   --network kafka-network \
@@ -387,6 +387,8 @@ kubectl port-forward -n splunk-operator svc/splunk-s1-standalone 8000:8000
 ```sh
 # Delete the secret Managers file
 gcloud secrets delete $ENV_VARS_SECRET --quiet
+
+gcloud secrets delete $REDIS_CACERT --quiet
 
 gcloud secrets delete $REDIS_SECRET --quiet
 
