@@ -35,7 +35,7 @@ public class GKEDeployApp {
 				if (propertySource instanceof MapPropertySource) {
 					Map<String, Object> props = ((MapPropertySource) propertySource).getSource();
 					props.forEach((key, value) -> {
-						if (key.startsWith("REDIS_") || key.startsWith("KAFKA_")) {
+						if (key.toUpperCase().startsWith("REDIS_") || key.toUpperCase().startsWith("KAFKA_")) {
 							log.info("Environment: {}: {}", key, value);
 						}
 					});
