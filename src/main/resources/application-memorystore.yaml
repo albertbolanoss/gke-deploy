@@ -12,10 +12,19 @@ spring:
     admin:
       auto-create: true
   data:
+    ssl:
+      enabled: true
+      bundle: redisSslBundle
     redis:
       host: ${REDIS_HOST}
       port: ${REDIS_PORT}
       password: ${REDIS_PASSWORD}
+  ssl:
+    bundle:
+      pem:
+        redisSslBundle:
+          truststore:
+            certificate: ${ssl_bundle_redis}
 
 management:
   health:
