@@ -39,3 +39,7 @@ management:
 health:
   kafka:
     rebalancing-max: PT1M
+
+logging:
+  file:
+    name: ${logging_file_name}
