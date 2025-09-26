@@ -45,10 +45,8 @@ spec:
           command: ["/bin/sh", "-c"]
           args:
             - |
-              echo "Verifying secrets..." &&
-              ls -l /etc/secrets/ &&
-              . /etc/secrets/secrets.env &&
-              export $(cut -d= -f1 /etc/secrets/secrets.env) &&
+              echo "Starting application..." &&
+              set -a && . /etc/secrets/secrets.env && set +a &&
               exec java -jar /app/gke_deploy.jar
           volumeMounts:
             - name: env-vars-volume
