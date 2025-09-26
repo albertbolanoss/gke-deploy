@@ -24,13 +24,19 @@ resources:
     cpu: "500m"
     memory: "256Mi"
 
+
 splunk:
   repository: splunk/universalforwarder
   tag: 9.3.3
   pullPolicy: IfNotPresent
+  enabled: true
+  env:
+    group: "root"
+    server: "lpec5009spkdm01.cardinalhealth.net:8089"
+    index: "ecomm_nxtgen_non-prod"
   resources:
     requests:
-      cpu: "400m"
+      cpu: "500m"
       memory: "256Mi"
     limits:
       cpu: 1

@@ -1,3 +1,4 @@
+{{- $driver := ternary "secrets-store-gke.csi.k8s.io" "secrets-store.csi.k8s.io" (eq .Values.gcp.secretManager.envsVars.secretProvider "gke") }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -15,35 +16,51 @@ spec:
       labels:
         {{- include "labs-helmchart-base.selector-labels" . | nindent 8 }}
     spec:
+      {{- if not (empty .Values.gcp.serviceAccount) }}
+      serviceAccountName: {{ .Values.gcp.serviceAccount }}
+      {{- end }}
       securityContext:
         {{- toYaml .Values.securityContext | nindent 8 }}
       containers:
         - name: {{ .Values.metadata.name }}
-          ports:
-            - containerPort: {{ .Values.service.targetPort }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.service.targetPort }}
+
           envFrom:
             - configMapRef:
                 name: {{ include "labs-helmchart-base.buildName" (list . "envcfg") }}
+
+          {{- if (and .Values.gcp.secretManager.envsVars.secretSyncEnabled (eq .Values.gcp.secretManager.envsVars.secretProvider "gcp")) }}
           env:
-            - name: REDIS_PASSWORD
+            {{- range $secret := .Values.gcp.secrets.envsVars }}
+            - name: {{ $secret.envVar }}
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "labs-helmchart-base.buildName" (list . "secsa") }}
-                  key: REDIS_PASSWORD
-          securityContext:
-            {{- toYaml .Values.podSecurityContext | nindent 12 }}
+                  name: {{ include "labs-helmchart-base.buildName" (list $ "sec") }}
+                  key: {{ $secret.key }}
+            {{- end }}
+          {{- end }}
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              echo "Starting application..." &&
+              set -a && . /etc/secrets/secrets.env && set +a &&
+              exec java -jar /app/gke_deploy.jar
           volumeMounts:
             - name: env-vars-volume
-              mountPath: "/sbin/envVars"
+              mountPath: "/etc/secrets"
               readOnly: true
-            - name: splunk-logs
-              mountPath: /var/log
+
+          securityContext:
+            {{- toYaml .Values.podSecurityContext | nindent 12 }}
+
           {{- with .Values.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+
           livenessProbe:
             httpGet:
               path: {{ .Values.livenessProbe.path }}
@@ -53,6 +70,7 @@ spec:
             timeoutSeconds: {{ .Values.livenessProbe.timeoutSeconds }}
             failureThreshold: {{ .Values.livenessProbe.failureThreshold }}
             successThreshold: {{ .Values.livenessProbe.successThreshold }}
+
           readinessProbe:
             httpGet:
               path: {{ .Values.readinessProbe.path }}
@@ -62,81 +80,79 @@ spec:
             timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
             failureThreshold: {{ .Values.readinessProbe.failureThreshold }}
             successThreshold: {{ .Values.readinessProbe.successThreshold }}
+
+        {{- if .Values.splunk.enabled }}
         - name: splunk-uf
           image: "{{ .Values.splunk.repository }}:{{ .Values.splunk.tag }}"
-          imagePullPolicy: {{ .Values.splunk.pullPolicy }}
+          imagePullPolicy: {{ .Values.splunk.pullPolicy | quote }}
           envFrom:
             - configMapRef:
-                name: {{ include "labs-helmchart-base.buildName" (list . "spkcfg") }}
+                name: {{ include "labs-helmchart-base.buildName" (list . "spkcfg") | quote }}
+
+          {{- if (and .Values.gcp.secretManager.splunk.secretSyncEnabled (eq .Values.gcp.secretManager.splunk.secretProvider "gcp")) }}
+          env:
+          {{- range $secret := .Values.gcp.secretManager.splunk.secrets }}
+          - name: {{ $secret.envVar | quote }}
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "labs-helmchart-base.buildName" (list $ "sec") | quote }}
+                key: {{ $secret.key | quote }}
+          {{- end }}
+          {{- end }}
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              echo "Starting Splunk..." &&
+              ls -l /etc/secrets/ &&
+              set -a && . /etc/secrets/splunk.env && set +a &&
+              exec /opt/splunkforwarder/bin/splunk start --accept-license --no-wait
+          volumeMounts:
+            - name: env-splunk-volume
+              mountPath: "/etc/secrets"
+              readOnly: true
+            - name: splunk-logs
+              mountPath: /var/log
           {{- with .Values.splunk.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          command:
-            - /bin/bash
-            - -c
-            - |
-              set -e
-              date
-              
-              SPLUNK_ENV_PATH="/sbin/envVars/splunk.env"
-              echo $SPLUNK_ENV_PATH
-              
-              max_wait=30
-              waited=0
-              
-              while [ ! -f "$SPLUNK_ENV_PATH" ] && [ $waited -lt $max_wait ]; do
-                sleep 1
-                waited=$((waited + 1))
-                echo "waiting"
-              done
-              
-              if [ -f "$SPLUNK_ENV_PATH" ]; then
-                echo "Sanitizing $SPLUNK_ENV_PATH"
-                tr -d '\r' < "$SPLUNK_ENV_PATH" > "/tmp/cleaned_splunk.env"
-                SPLUNK_ENV_PATH="/tmp/cleaned_splunk.env"
-              
-                echo "Loading environment variables from $SPLUNK_ENV_PATH"
-                set -a
-                . "$SPLUNK_ENV_PATH"
-                set +a
-              else
-                echo "ERROR: $SPLUNK_ENV_PATH not found after $max_wait seconds."
-                exit 1
-              fi
-              
-              echo "Starting Splunk Forwarder"
-              exec /sbin/entrypoint.sh start
-          volumeMounts:
-            - name: env-splunk-volume
-              mountPath: "/sbin/envVars"
-              readOnly: true
-            - name: splunk-logs
-              mountPath: /var/log
+        {{- end }}
+
       volumes:
+        {{- if or (eq .Values.gcp.secretManager.envsVars.secretProvider "gcp") (eq .Values.gcp.secretManager.envsVars.secretProvider "gke") }}
         - name: env-vars-volume
           csi:
-            driver: secrets-store.csi.k8s.io
+            driver: {{ $driver | quote }}
             readOnly: true
             volumeAttributes:
-              secretProviderClass: {{ include "labs-helmchart-base.buildName" (list . "envsp") }}
+              secretProviderClass: {{ include "labs-helmchart-base.buildName" (list . "envsp") | quote }}
+        {{- else }}
+        {{- if .Values.splunk.enabled }}
         - name: env-splunk-volume
           csi:
-            driver: secrets-store.csi.k8s.io
+            driver: {{ $driver | quote }}
             readOnly: true
             volumeAttributes:
-              secretProviderClass: {{ include "labs-helmchart-base.buildName" (list . "spksp") }}
-        - name: splunk-logs
-          emptyDir: { }
+              secretProviderClass: {{ include "labs-helmchart-base.buildName" (list . "spksp") | quote }}
+        {{- end }}
+        - name: env-vars-volume
+          secret:
+            secretName: {{ include "labs-helmchart-base.buildName" (list . "envsp") }}
+            defaultMode: 0640
+            items:
+              - key: secrets.env
+                path: secrets.env
+        {{- end }}
+
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
       {{- end }}
     {{- with .Values.affinity }}
     affinity:
-      {{- toYaml . | nindent 8 }}
+      {{- toYaml . | nindent 6 }}
     {{- end }}
     {{- with .Values.tolerations }}
     tolerations:
-      {{- toYaml . | nindent 8 }}
+      {{- toYaml . | nindent 6 }}
     {{- end }}
