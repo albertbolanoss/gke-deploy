@@ -116,6 +116,7 @@ REDIS_SECRET=labs-soft-npd-gke-deploy-dev-redis-password
 KAFKA_SECRET=labs-soft-npd-gke-deploy-dev-kafka-password
 REDIS_CACERT=cache-ssl-pem
 GSA_EMAIL="${GSA}@${PROJECT_ID}.iam.gserviceaccount.com"
+SPLUNK_SECRET=splunk-dev
 ```
 
 #### Enable needed APIs
@@ -161,6 +162,17 @@ gcloud container clusters get-credentials "$CLUSTER_NAME" \
 kubectl create namespace $NAMESPACE
 ```
 
+#### Create output fireware rule
+```sh
+gcloud compute firewall-rules create allow-splunk-cloud-egress \
+    --network=default \
+    --action=ALLOW \
+    --direction=EGRESS \
+    --rules=tcp:443 \
+    --destination-ranges=0.0.0.0/0 \
+    --priority=1000
+```
+
 #### Create GCP Secret Manager
 
 ```sh
@@ -187,6 +199,11 @@ gcloud secrets create $REDIS_CACERT \
     --project=$PROJECT_ID \
     --replication-policy="automatic" \
     --data-file=charts/secrets/redis-cacert.pem
+    
+gcloud secrets create $SPLUNK_SECRET \
+    --project=$PROJECT_ID \
+    --replication-policy="automatic" \
+    --data-file=charts/secrets/splunk.env
 
 # Individual secrets as text for GCP with Sync (secretProvider: gcp and secretSyncEnabled: true)
 echo -n 'password' | gcloud secrets create $REDIS_SECRET \
@@ -207,6 +224,7 @@ echo -n 'REDIS_SECRET=password' | gcloud secrets create $REDIS_SECRET \
 echo -n 'KAFKA_SECRET=password' | gcloud secrets create $KAFKA_SECRET \
   --replication-policy="automatic" \
   --data-file=-
+  
 
 ```
 
@@ -218,6 +236,17 @@ kubectl -n $NAMESPACE get sa $KSA || kubectl -n $NAMESPACE create sa $KSA
 
 # 2. Otorga el rol de "Secret Manager Secret Accessor" a la GSA
 gcloud secrets add-iam-policy-binding "$ENV_VARS_SECRET" \
+  --project="$PROJECT_ID" \
+  --role="roles/secretmanager.secretAccessor" \
+  --member="principal://iam.googleapis.com/projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/$PROJECT_ID.svc.id.goog/subject/ns/$NAMESPACE/sa/$KSA"
+
+gcloud secrets add-iam-policy-binding "$REDIS_CACERT" \
+  --project="$PROJECT_ID" \
+  --role="roles/secretmanager.secretAccessor" \
+  --member="principal://iam.googleapis.com/projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/$PROJECT_ID.svc.id.goog/subject/ns/$NAMESPACE/sa/$KSA"
+
+
+gcloud secrets add-iam-policy-binding "$SPLUNK_SECRET" \
   --project="$PROJECT_ID" \
   --role="roles/secretmanager.secretAccessor" \
   --member="principal://iam.googleapis.com/projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/$PROJECT_ID.svc.id.goog/subject/ns/$NAMESPACE/sa/$KSA"
@@ -236,8 +265,8 @@ gcloud secrets add-iam-policy-binding "$KAFKA_SECRET" \
 
 # Checking
 gcloud secrets get-iam-policy $ENV_VARS_SECRET --project "$PROJECT_ID"  
-gcloud secrets get-iam-policy $REDIS_SECRET --project "$PROJECT_ID"
-gcloud secrets get-iam-policy $KAFKA_SECRET --project "$PROJECT_ID"
+gcloud secrets get-iam-policy $REDIS_CACERT --project "$PROJECT_ID"
+gcloud secrets get-iam-policy $SPLUNK_SECRET --project "$PROJECT_ID"
 
 ```
 
@@ -306,8 +335,14 @@ gcloud secrets add-iam-policy-binding $REDIS_CACERT \
   --role roles/secretmanager.secretAccessor \
   --member "serviceAccount:${GSA_EMAIL}"
 
+# Dar permiso a splunk secret
+gcloud secrets add-iam-policy-binding $SPLUNK_SECRET \
+  --project "$PROJECT_ID" \
+  --role roles/secretmanager.secretAccessor \
+  --member "serviceAccount:${GSA_EMAIL}"
 
-#In case multi secret files
+
+# In case multi secret files
 
 # Dar permiso a la GSA para leer el secreto individual REDIS_PASSWORD
 gcloud secrets add-iam-policy-binding $REDIS_SECRET \
@@ -321,8 +356,9 @@ gcloud secrets add-iam-policy-binding $KAFKA_SECRET \
   --member "serviceAccount:${GSA_EMAIL}"
 
 
+
 gcloud secrets get-iam-policy $ENV_VARS_SECRET --project "$PROJECT_ID"  
-gcloud secrets get-iam-policy $REDIS_SECRET --project "$PROJECT_ID"
+gcloud secrets get-iam-policy $REDIS_CACERT --project "$PROJECT_ID"
 gcloud secrets get-iam-policy $KAFKA_SECRET --project "$PROJECT_ID"
 
 ```
@@ -394,6 +430,8 @@ gcloud secrets delete $REDIS_SECRET --quiet
 
 gcloud secrets delete $KAFKA_SECRET --quiet
 
+gcloud secrets delete $SPLUNK_SECRET --quiet
+
 # Delete Autopilot cluster
 gcloud container clusters delete "$CLUSTER_NAME" \
   --region="$REGION" \
@@ -409,6 +447,10 @@ gcloud container clusters delete "$CLUSTER_NAME" \
 # Delete GSA (for standard cluster)
 gcloud iam service-accounts delete "$GSA@$PROJECT_ID.iam.gserviceaccount.com" \
   --project="$PROJECT_ID"
+
+# Delete fireware output rule
+gcloud compute firewall-rules delete allow-splunk-cloud-egress
+
 ```
 
 #### Aditional commands

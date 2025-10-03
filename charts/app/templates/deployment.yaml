@@ -1,6 +1,8 @@
 {{- $driver := ternary "secrets-store-gke.csi.k8s.io" "secrets-store.csi.k8s.io" (eq .Values.gcp.secretManager.envsVars.secretProvider "gke") }}
+{{- $isStatefulSet := eq .Values.deployment.type "StatefulSet" }}
+{{- $isGCPProviderAndSyncSecrets := and .Values.gcp.secretManager.envsVars.secretSyncEnabled (eq .Values.gcp.secretManager.envsVars.secretProvider "gcp") }}
 apiVersion: apps/v1
-kind: Deployment
+kind: "{{ .Values.deployment.type }}"
 metadata:
   name: {{ include "labs-helmchart-base.buildName" (list . "deploy") }}
   namespace: {{ .Release.Namespace }}
@@ -34,7 +36,7 @@ spec:
 
           {{- if (and .Values.gcp.secretManager.envsVars.secretSyncEnabled (eq .Values.gcp.secretManager.envsVars.secretProvider "gcp")) }}
           env:
-            {{- range $secret := .Values.gcp.secrets.envsVars }}
+            {{- range $secret := .Values.gcp.secretManager.envsVars.secrets }}
             - name: {{ $secret.envVar }}
               valueFrom:
                 secretKeyRef:
@@ -45,13 +47,22 @@ spec:
           command: ["/bin/sh", "-c"]
           args:
             - |
-              echo "Starting application..." &&
-              set -a && . /etc/secrets/secrets.env && set +a &&
-              exec java -jar /app/gke_deploy.jar
+                echo "Starting application..." && \
+                export COVEOINDEXERS_PRICING_PARTITIONS=$(echo $HOSTNAME | rev | cut -d'-' -f1 | rev) && \
+                echo "COVEOINDEXERS_PRICING_PARTITIONS=$COVEOINDEXERS_PRICING_PARTITIONS" && \
+                export COVEOINDEXERS_PRODUCTS_PARTITIONS=$(echo $HOSTNAME | rev | cut -d'-' -f1 | rev) && \
+                echo "COVEOINDEXERS_PRODUCTS_PARTITIONS=$COVEOINDEXERS_PRODUCTS_PARTITIONS" && \
+                ls -l /etc/secrets/ && \
+                set -a && . /etc/secrets/secrets.env && set +a && \
+                exec java -jar {{ .Values.deployment.appJar }}
           volumeMounts:
             - name: env-vars-volume
               mountPath: "/etc/secrets"
               readOnly: true
+            {{- if .Values.splunk.enabled }}
+            - name: splunk-logs
+              mountPath: /var/log
+            {{- end }}
 
           securityContext:
             {{- toYaml .Values.podSecurityContext | nindent 12 }}
@@ -89,7 +100,7 @@ spec:
             - configMapRef:
                 name: {{ include "labs-helmchart-base.buildName" (list . "spkcfg") | quote }}
 
-          {{- if (and .Values.gcp.secretManager.splunk.secretSyncEnabled (eq .Values.gcp.secretManager.splunk.secretProvider "gcp")) }}
+          {{- if $isGCPProviderAndSyncSecrets }}
           env:
           {{- range $secret := .Values.gcp.secretManager.splunk.secrets }}
           - name: {{ $secret.envVar | quote }}
@@ -98,14 +109,22 @@ spec:
                 name: {{ include "labs-helmchart-base.buildName" (list $ "sec") | quote }}
                 key: {{ $secret.key | quote }}
           {{- end }}
-          {{- end }}
           command: ["/bin/sh", "-c"]
           args:
             - |
               echo "Starting Splunk..." &&
-              ls -l /etc/secrets/ &&
-              set -a && . /etc/secrets/splunk.env && set +a &&
               exec /opt/splunkforwarder/bin/splunk start --accept-license --no-wait
+          {{- else }}
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              echo "Starting Splunk..." &&
+              set -a && . /etc/secrets/splunk.env && set +a &&
+              /opt/splunkforwarder/bin/splunk start --accept-license --answer-yes --no-prompt --gen-and-print-splunkd-pem > /dev/null &&
+              /opt/splunkforwarder/bin/splunk add forward-server $SPLUNK_FORWARD_SERVER -auth $SPLUNK_USER:$SPLUNK_PASSWORD &&
+              /opt/splunkforwarder/bin/splunk $SPLUNK_CMD &&
+              exec /opt/splunkforwarder/bin/splunk start --accept-license --no-wait
+          {{- end }}
           volumeMounts:
             - name: env-splunk-volume
               mountPath: "/etc/secrets"
@@ -119,7 +138,7 @@ spec:
         {{- end }}
 
       volumes:
-        {{- if or (eq .Values.gcp.secretManager.envsVars.secretProvider "gcp") (eq .Values.gcp.secretManager.envsVars.secretProvider "gke") }}
+        {{- if $isGCPProviderAndSyncSecrets }}
         - name: env-vars-volume
           csi:
             driver: {{ $driver | quote }}
@@ -127,14 +146,6 @@ spec:
             volumeAttributes:
               secretProviderClass: {{ include "labs-helmchart-base.buildName" (list . "envsp") | quote }}
         {{- else }}
-        {{- if .Values.splunk.enabled }}
-        - name: env-splunk-volume
-          csi:
-            driver: {{ $driver | quote }}
-            readOnly: true
-            volumeAttributes:
-              secretProviderClass: {{ include "labs-helmchart-base.buildName" (list . "spksp") | quote }}
-        {{- end }}
         - name: env-vars-volume
           secret:
             secretName: {{ include "labs-helmchart-base.buildName" (list . "envsp") }}
@@ -143,7 +154,16 @@ spec:
               - key: secrets.env
                 path: secrets.env
         {{- end }}
-
+        {{- if .Values.splunk.enabled }}
+        - name: env-splunk-volume
+          csi:
+            driver: {{ $driver | quote }}
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: {{ include "labs-helmchart-base.buildName" (list . "spkspc") | quote }}
+        - name: splunk-logs
+          emptyDir: { }
+        {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
@@ -156,3 +176,14 @@ spec:
     tolerations:
       {{- toYaml . | nindent 6 }}
     {{- end }}
+  {{- if $isStatefulSet }}
+  volumeClaimTemplates:
+    - metadata:
+        name: "persistentVolumeData"
+      spec:
+        accessModes: {{ .Values.deployment.persistentVolume.accessModes }}
+        resources:
+          requests:
+            storage: "{{ .Values.deployment.persistentVolume.storage }}"
+        storageClassName: "{{ .Values.deployment.persistentVolume.storageClassName }}"
+  {{- end }}

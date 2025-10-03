@@ -66,3 +66,25 @@ Build the instace name with environment
 {{- define "labs-helmchart-base.instanceWithEnvironment" -}}
 {{- printf "searchindexer-%s" .Values.environment | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
+
+{{/*
+Generates the startup command for the main container.
+- Adds partitioning logic if replicaCount is greater than 1.
+- Adds secret sourcing if the GCP provider with secretSync is not used.
+*/}}
+{{- define "cah-helmchart-base.startupCommand" -}}
+- |
+  echo "Starting application..." && \
+  {{- if gt (.Values.replicaCount | int) 1 }}
+  export COVEOINDEXERS_PRICING_PARTITIONS=$(echo $HOSTNAME | rev | cut -d'-' -f1 | rev) && \
+  echo "COVEOINDEXERS_PRICING_PARTITIONS=$COVEOINDEXERS_PRICING_PARTITIONS" && \
+  export COVEOINDEXERS_PRODUCTS_PARTITIONS=$(echo $HOSTNAME | rev | cut -d'-' -f1 | rev) && \
+  echo "COVEOINDEXERS_PRODUCTS_PARTITIONS=$COVEOINDEXERS_PRODUCTS_PARTITIONS" && \
+  {{- end }}
+  {{- $isGCPProviderAndSyncSecrets := and .Values.gcp.secretSyncEnabled (eq .Values.gcp.secretProvider "gcp") }}
+  {{- if not $isGCPProviderAndSyncSecrets }}
+  ls -l /etc/secrets/ && \
+  set -a && . /etc/secrets/secrets.env && set +a && \
+  {{- end }}
+  exec java -jar {{ .Values.deployment.appJar }}
+{{- end -}}

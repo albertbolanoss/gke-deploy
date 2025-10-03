@@ -16,6 +16,15 @@ image:
   tag: "sha-ab6cedd"
   pullPolicy: Always
 
+deployment:
+  type: "Deployment"
+  appJar: "/app/gke_deploy.jar"
+  persistentVolume:
+    moundPath: "/data"
+    accessModes: ["ReadWriteOnce"]
+    storage: "10Gi"
+    storageClassName: "pd-standard"
+
 resources:
   requests:
     cpu: "100m"
@@ -27,13 +36,13 @@ resources:
 
 splunk:
   repository: splunk/universalforwarder
-  tag: 9.3.3
-  pullPolicy: IfNotPresent
-  enabled: true
+  tag: 8.1.7.2
+  pullPolicy: Always
+  enabled: false
   env:
     group: "root"
-    server: "lpec5009spkdm01.cardinalhealth.net:8089"
-    index: "ecomm_nxtgen_non-prod"
+    server: "https://http-inputs-prd-p-fzo27.splunkcloud.com:443"
+    index: "Default"
   resources:
     requests:
       cpu: "500m"
@@ -91,7 +100,7 @@ gcp:
   projectNumber: "230862495170"
   secretManager:
     envsVars:
-      secretProvider: "gcp"
+      secretProvider: "gke"
       secretSyncEnabled: false
       secrets:
         - name: "env-vars-dev" 
@@ -103,7 +112,7 @@ gcp:
           key: ""
           envVar: ""
     splunk:
-      secretProvider: "gcp"
+      secretProvider: "gke"
       secretSyncEnabled: false
       secrets:
         - name: "splunk-dev"
