@@ -7,14 +7,23 @@ environment: "dev"
 replicaCount: 1
 
 metadata:
-  namePrefix: "labs-soft"
-  name: "gke-deploy"
+  namePrefix: "labs"
+  name: "app"
   defaultNamespace: "labs-dev"
 
 image:
   repository: luigisamurai/gkedeploy
   tag: "sha-ab6cedd"
   pullPolicy: Always
+
+deployment:
+  type: "StatefulSet"
+  appJar: "/app/gke_deploy.jar"
+  persistentVolume:
+    moundPath: "/data"
+    accessModes: ["ReadWriteOnce"]
+    storage: "10Gi"
+    storageClassName: "standard"
 
 resources:
   requests:
