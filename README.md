@@ -148,7 +148,7 @@ gcloud container clusters create "$CLUSTER_NAME" \
   --image-type=COS_CONTAINERD \
   --workload-pool="$PROJECT_ID.svc.id.goog" \
   --monitoring=NONE \
-  --enable-autoscaling --min-nodes 1 --max-nodes 3
+  --enable-autoscaling --min-nodes 1 --max-nodes 1
 ```
 
 #### Get kubectl credential and create namespace
@@ -322,7 +322,7 @@ gcloud secrets add-iam-policy-binding $KAFKA_SECRET \
 
 
 gcloud secrets get-iam-policy $ENV_VARS_SECRET --project "$PROJECT_ID"  
-gcloud secrets get-iam-policy $REDIS_SECRET --project "$PROJECT_ID"
+gcloud secrets get-iam-policy $REDIS_CACERT --project "$PROJECT_ID"
 gcloud secrets get-iam-policy $KAFKA_SECRET --project "$PROJECT_ID"
 
 ```
@@ -409,6 +409,10 @@ gcloud container clusters delete "$CLUSTER_NAME" \
 # Delete GSA (for standard cluster)
 gcloud iam service-accounts delete "$GSA@$PROJECT_ID.iam.gserviceaccount.com" \
   --project="$PROJECT_ID"
+
+# Delete Persistent Disk
+gcloud compute disks delete [NAME] --zone=$ZONE
+
 ```
 
 #### Aditional commands
@@ -421,6 +425,13 @@ kubectl get pod -n $NAMESPACE
 helm get manifest labs-deploy -n labs-dev | less
 
 kubectl describe pod -n $NAMESPACE
+
+kubectl describe statefulset labs-npd-app-dev-deploy -n $NAMESPACE
+
+kubectl describe pvc pvd-labs-npd-app-dev-deploy-0 -n $NAMESPACE
+
+kubectl delete pvc pvd-labs-npd-app-dev-deploy-0 -n $NAMESPACE
+
 
 kubectl logs -f -n $NAMESPACE labs-soft-npd-gke-deploy-dev-deploy-6557f9d565-rc7zc
 

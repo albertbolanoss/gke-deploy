@@ -1,6 +1,8 @@
 {{- $driver := ternary "secrets-store-gke.csi.k8s.io" "secrets-store.csi.k8s.io" (eq .Values.gcp.secretManager.envsVars.secretProvider "gke") }}
+{{- $isStatefulSet := eq .Values.deployment.type "StatefulSet" }}
+{{- $isGCPProviderAndSyncSecrets := and .Values.gcp.secretManager.envsVars.secretSyncEnabled (eq .Values.gcp.secretManager.envsVars.secretProvider "gcp") }}
 apiVersion: apps/v1
-kind: Deployment
+kind: "{{ .Values.deployment.type }}"
 metadata:
   name: {{ include "labs-helmchart-base.buildName" (list . "deploy") }}
   namespace: {{ .Release.Namespace }}
@@ -32,7 +34,7 @@ spec:
             - configMapRef:
                 name: {{ include "labs-helmchart-base.buildName" (list . "envcfg") }}
 
-          {{- if (and .Values.gcp.secretManager.envsVars.secretSyncEnabled (eq .Values.gcp.secretManager.envsVars.secretProvider "gcp")) }}
+          {{- if $isGCPProviderAndSyncSecrets }}
           env:
            {{- range $secret := .Values.gcp.secrets.envsVars }}
             - name: {{ $secret.envVar }}
@@ -44,10 +46,15 @@ spec:
           {{- end }}
           command: ["/bin/sh", "-c"]
           args:
-            - |
-              echo "Starting application..." &&
-              set -a && . /etc/secrets/secrets.env && set +a &&
-              exec java -jar /app/gke_deploy.jar
+          - |
+              echo "Starting application..." && \
+              export COVEOINDEXERS_PRICING_PARTITIONS=$(echo $HOSTNAME | rev | cut -d'-' -f1 | rev) && \
+              echo "COVEOINDEXERS_PRICING_PARTITIONS=$COVEOINDEXERS_PRICING_PARTITIONS" && \
+              export COVEOINDEXERS_PRODUCTS_PARTITIONS=$(echo $HOSTNAME | rev | cut -d'-' -f1 | rev) && \
+              echo "COVEOINDEXERS_PRODUCTS_PARTITIONS=$COVEOINDEXERS_PRODUCTS_PARTITIONS" && \
+              ls -l /etc/secrets/ && \
+              set -a && . /etc/secrets/secrets.env && set +a && \
+              exec java -jar {{ .Values.deployment.appJar }}
           volumeMounts:
             - name: env-vars-volume
               mountPath: "/etc/secrets"
@@ -111,3 +118,14 @@ spec:
     tolerations:
       {{- toYaml . | nindent 6 }}
     {{- end }}
+  {{- if $isStatefulSet }}
+  volumeClaimTemplates:
+    - metadata:
+        name: "pvd"
+      spec:
+        accessModes: {{ .Values.deployment.persistentVolume.accessModes }}
+        resources:
+          requests:
+            storage: "{{ .Values.deployment.persistentVolume.storage }}"
+        storageClassName: "{{ .Values.deployment.persistentVolume.storageClassName }}"
+  {{- end }}
