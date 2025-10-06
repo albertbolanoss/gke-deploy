@@ -409,6 +409,10 @@ gcloud container clusters delete "$CLUSTER_NAME" \
 # Delete GSA (for standard cluster)
 gcloud iam service-accounts delete "$GSA@$PROJECT_ID.iam.gserviceaccount.com" \
   --project="$PROJECT_ID"
+
+# Delete Persistent Disk
+gcloud compute disks delete [NAME] --zone=$ZONE
+
 ```
 
 #### Aditional commands
