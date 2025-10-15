@@ -486,3 +486,34 @@ kubectl exec -it broker2 -n $NAMESPACE -- sh
   --property "parse.key=true" \
   --property "key.separator=:"
 ```
+
+### Install splunk using Docker
+
+```sh
+docker run -d \
+  --name splunk-onprem \
+  -p 8000:8000 \
+  -p 9997:9997 \
+  -p 8089:8089 \
+  -e "SPLUNK_START_ARGS=--accept-license" \
+  -e "SPLUNK_PASSWORD=changeme" \
+  splunk/splunk:8.1.7.2
+
+docker start splunk-onprem
+```
+
+### Install splunk server (Helm)
+
+```sh
+helm repo add splunk https://splunk.github.io/helm-charts
+helm repo update
+
+helm install splunk-operator splunk/splunk-enterprise -f charts/splunk/splunk-operator.yaml
+# Wait until the pod is running
+kubectl get pods -w
+
+kubectl apply -f charts/splunk/splunk-server.yaml
+
+
+kubectl port-forward splunk-operator-controller-manager-fc6dd85f-jbhv9 8000:8000
+```

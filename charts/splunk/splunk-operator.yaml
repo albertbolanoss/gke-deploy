@@ -1,0 +1,31 @@
+splunk-operator:
+  installCRDs: true
+
+# Acepta la licencia de Splunk para que el contenedor pueda iniciar.
+acceptLicense: true
+
+# Configuración general de Splunk
+splunk:
+  # Define la contraseña para el usuario 'admin'. ¡Cámbiala por una segura!
+  password: "changeme"
+
+# Queremos una instalación 'standalone' (un solo nodo), ideal para desarrollo.
+standalone:
+  # Aquí especificamos la versión de la imagen de Splunk Enterprise.
+  # Una versión 9.x es perfectamente compatible con un forwarder 8.1.7.2.
+  image:
+    tag: "9.0.0"
+
+# Configuración de red: Cómo expondremos Splunk fuera del clúster.
+service:
+  # Usaremos NodePort. Es la forma más sencilla de exponer un servicio en Minikube
+  # sin necesidad de herramientas adicionales como 'minikube tunnel'.
+  type: NodePort
+  # Define los puertos que queremos exponer.
+  ports:
+    # Puerto 8000 para la Interfaz Web (UI)
+    ui: 8000
+    # Puerto 9997 para recibir datos del Forwarder
+    s2s: 9997
+    # Puerto 8089 para la administración remota
+    mgmt: 8089
