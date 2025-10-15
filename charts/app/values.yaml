@@ -41,7 +41,7 @@ splunk:
   mountPath: "/var/log/coveo-streams-indexer"
   env:
     group: "root"
-    server: "lpec5009spkdm01.cardinalhealth.net:8089"
+    server: "localhost:8089"
     index: "ecomm_nxtgen_non-prod"
   resources:
     requests:
@@ -100,7 +100,7 @@ gcp:
   projectNumber: "230862495170"
   secretManager:
     envsVars:
-      secretProvider: "gcp"
+      secretProvider: "none"
       secretSyncEnabled: false
       secrets:
         - name: "env-vars-dev" 
@@ -112,7 +112,7 @@ gcp:
           key: ""
           envVar: ""
     splunk:
-      secretProvider: "gcp"
+      secretProvider: "none"
       secretSyncEnabled: false
       secrets:
         - name: "splunk-dev"

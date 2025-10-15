@@ -1,6 +1,7 @@
 {{- $driver := ternary "secrets-store-gke.csi.k8s.io" "secrets-store.csi.k8s.io" (eq .Values.gcp.secretManager.envsVars.secretProvider "gke") }}
 {{- $isStatefulSet := eq .Values.deployment.type "StatefulSet" }}
 {{- $isGCPProviderAndSyncSecrets := and .Values.gcp.secretManager.envsVars.secretSyncEnabled (eq .Values.gcp.secretManager.envsVars.secretProvider "gcp") }}
+{{- $isGcpOrGke := or (eq .Values.gcp.secretManager.envsVars.secretProvider "gcp") (eq .Values.gcp.secretManager.envsVars.secretProvider "gke") }}
 apiVersion: apps/v1
 kind: "{{ .Values.deployment.type }}"
 metadata:
@@ -135,18 +136,34 @@ spec:
       {{- end }}
       volumes:
         - name: env-vars-volume
+          {{- if $isGcpOrGke }}
           csi:
             driver: {{ $driver | quote }}
             readOnly: true
             volumeAttributes:
               secretProviderClass: {{ include "labs-helmchart-base.buildName" (list . "envsp") | quote }}       
+          {{- else }}
+          secret:
+            secretName: {{ include "labs-helmchart-base.buildName" (list . "envsp") | quote }}
+            items:
+              - key: secrets.env
+                path: secrets.env    
+          {{- end }}    
       {{- if .Values.splunk.enabled }}
         - name: env-splunk-volume
+          {{- if $isGcpOrGke }}
           csi:
             driver: {{ $driver | quote }}
             readOnly: true
             volumeAttributes:
               secretProviderClass: {{ include "labs-helmchart-base.buildName" (list . "spksp") | quote }}
+          {{- else }}
+          secret:
+            secretName: {{ include "labs-helmchart-base.buildName" (list . "spksp") | quote }}
+            items:
+              - key: secrets.env
+                path: splunk.env
+          {{- end }}
         - name: splunk-logs
           emptyDir: { }
       {{- end }}
@@ -162,7 +179,7 @@ spec:
     tolerations:
       {{- toYaml . | nindent 8 }}
     {{- end }}
-      
+      {{- if $isGcpOrGke }}
       volumes:
         {{- if or (eq .Values.gcp.secretManager.envsVars.secretProvider "gcp") (eq .Values.gcp.secretManager.envsVars.secretProvider "gke") }}
         - name: env-vars-volume
@@ -180,7 +197,7 @@ spec:
               - key: secrets.env
                 path: secrets.env
         {{- end }}
-
+      {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

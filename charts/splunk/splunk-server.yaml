@@ -1,0 +1,12 @@
+apiVersion: enterprise.splunk.com/v3
+kind: Standalone
+metadata:
+  # El nombre de tu instancia de Splunk
+  name: s1
+spec:
+  # Esta sección es importante para que la contraseña se maneje de forma segura.
+  # El Operator buscará un Secret llamado 'splunk-s1-secret' con una clave 'password'.
+  # Lo creará automáticamente con la contraseña 'helloworld' si no existe.
+  # ¡CAMBIA 'helloworld' POR UNA CONTRASEÑA SEGURA!
+  defaults: '{"spec":{"serviceTemplate":{"spec":{"type": "NodePort"}},"password":"changeme"}}'
+  
