@@ -1,6 +1,7 @@
 {{- $driver := ternary "secrets-store-gke.csi.k8s.io" "secrets-store.csi.k8s.io" (eq .Values.gcp.secretManager.envsVars.secretProvider "gke") }}
 {{- $isStatefulSet := eq .Values.deployment.type "StatefulSet" }}
 {{- $isGCPProviderAndSyncSecrets := and .Values.gcp.secretManager.envsVars.secretSyncEnabled (eq .Values.gcp.secretManager.envsVars.secretProvider "gcp") }}
+{{- $isGcpOrGke := or (eq .Values.gcp.secretManager.envsVars.secretProvider "gcp") (eq .Values.gcp.secretManager.envsVars.secretProvider "gke") }}
 apiVersion: apps/v1
 kind: "{{ .Values.deployment.type }}"
 metadata:
@@ -18,7 +19,7 @@ spec:
       labels:
         {{- include "labs-helmchart-base.selector-labels" . | nindent 8 }}
     spec:
-      {{- if not (empty .Values.gcp.serviceAccount) }}
+      {{- if and $isGcpOrGke not (empty .Values.gcp.serviceAccount) }}
       serviceAccountName: {{ .Values.gcp.serviceAccount }}
       {{- end }}
       securityContext:

@@ -17,7 +17,7 @@ image:
   pullPolicy: Always
 
 deployment:
-  type: "StatefulSet"
+  type: "Deployment"
   appJar: "/app/gke_deploy.jar"
   persistentVolume:
     moundPath: "/data"
@@ -94,7 +94,7 @@ gcp:
   projectNumber: "230862495170"
   secretManager:
     envsVars:
-      secretProvider: "gcp"
+      secretProvider: "none"
       secretSyncEnabled: false
       secrets:
         - name: "env-vars-dev" 
@@ -106,7 +106,7 @@ gcp:
           key: ""
           envVar: ""
     splunk:
-      secretProvider: "gcp"
+      secretProvider: "none"
       secretSyncEnabled: false
       secrets:
         - name: "splunk-dev"
