@@ -60,7 +60,10 @@ spec:
             - name: env-vars-volume
               mountPath: "/etc/secrets"
               readOnly: true
-
+          {{- if .Values.splunk.enabled }}
+            - name: splunk-logs
+              mountPath: {{ .Values.splunk.mountPath | quote }} 
+          {{- end }}
           securityContext:
             {{- toYaml .Values.podSecurityContext | nindent 12 }}
 
@@ -88,6 +91,39 @@ spec:
             timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
             failureThreshold: {{ .Values.readinessProbe.failureThreshold }}
             successThreshold: {{ .Values.readinessProbe.successThreshold }}
+      
+      {{- if .Values.splunk.enabled }}
+        - name: splunk-uf
+          image: "{{ .Values.splunk.repository }}:{{ .Values.splunk.tag }}"
+          imagePullPolicy: {{ .Values.splunk.pullPolicy | quote }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "labs-helmchart-base.buildName" (list . "spkcfg") | quote }}
+
+          {{- if $isGCPProviderAndSyncSecrets }}
+          env:
+          {{- range $secret := .Values.gcp.secretManager.splunk.secrets }}
+            - name: {{ $secret.envVar | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "labs-helmchart-base.buildName" (list $ "spksec") | quote }}
+                  key: {{ $secret.key | quote }}
+          {{- end }}
+          {{- end }}
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              echo "Starting Splunk..." &&
+              set -a && . /etc/secrets/secrets.env && set +a &&
+              echo $SPLUNK_FORWARD_SERVER_PASSWORD &&
+              exec /sbin/entrypoint.sh
+          volumeMounts:
+            - name: env-splunk-volume
+              mountPath: "/etc/secrets"
+              readOnly: true
+            - name: splunk-logs
+              mountPath: {{ .Values.splunk.mountPath | quote }}              
+      {{- end }}
 
       volumes:
         {{- if or (eq .Values.gcp.secretManager.envsVars.secretProvider "gcp") (eq .Values.gcp.secretManager.envsVars.secretProvider "gke") }}
@@ -97,6 +133,16 @@ spec:
             readOnly: true
             volumeAttributes:
               secretProviderClass: {{ include "labs-helmchart-base.buildName" (list . "envsp") | quote }}
+        {{- if .Values.splunk.enabled }}
+        - name: env-splunk-volume
+          csi:
+            driver: {{ $driver | quote }}
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: {{ include "labs-helmchart-base.buildName" (list . "spksp") | quote }}
+        - name: splunk-logs
+          emptyDir: { }
+        {{- end }}      
         {{- else }}
         - name: env-vars-volume
           secret:
@@ -105,6 +151,17 @@ spec:
             items:
               - key: secrets.env
                 path: secrets.env
+        {{- if .Values.splunk.enabled }}
+        - name: env-splunk-volume
+          secret:
+            secretName: {{ include "labs-helmchart-base.buildName" (list . "spksp") }}
+            defaultMode: 0777
+            items:
+              - key: secrets.env
+                path: secrets.env
+        - name: splunk-logs
+          emptyDir: { }
+        {{- end }}  
         {{- end }}
 
       {{- with .Values.nodeSelector }}

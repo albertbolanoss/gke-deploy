@@ -34,16 +34,23 @@ resources:
     memory: "256Mi"
 
 splunk:
+  enabled: true
   repository: splunk/universalforwarder
-  tag: 9.3.3
-  pullPolicy: IfNotPresent
+  tag: 8.1.7.2
+  pullPolicy: "Always"
+  mountPath: "/var/log/gke_deploy"
+  logFile: "app.log"
+  env:
+    group: "root"
+    server: "host.docker.internal:9997"
+    index: "ecomm_nxtgen_non-prod"
+    sourcetype: app
   resources:
     requests:
-      cpu: "400m"
+      cpu: "500m"
       memory: "256Mi"
     limits:
       cpu: 1
-      memory: "512Mi"
 
 service:
   type: ClusterIP

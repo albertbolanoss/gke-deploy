@@ -486,3 +486,19 @@ kubectl exec -it broker2 -n $NAMESPACE -- sh
   --property "parse.key=true" \
   --property "key.separator=:"
 ```
+
+
+### Install splunk using Docker
+
+```sh
+docker run -d \
+  --name splunk-onprem \
+  -p 8000:8000 \
+  -p 9997:9997 \
+  -p 8089:8089 \
+  -e "SPLUNK_START_ARGS=--accept-license" \
+  -e "SPLUNK_PASSWORD=changeme" \
+  splunk/splunk:8.1.7.2
+
+docker start splunk-onprem
+```
