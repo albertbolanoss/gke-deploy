@@ -17,7 +17,7 @@ image:
   pullPolicy: Always
 
 deployment:
-  type: "StatefulSet"
+  type: "Deployment"
   appJar: "/app/gke_deploy.jar"
   persistentVolume:
     moundPath: "/data"
@@ -34,12 +34,18 @@ resources:
     memory: "256Mi"
 
 splunk:
+  enabled: true
   repository: splunk/universalforwarder
-  tag: 9.3.3
-  pullPolicy: IfNotPresent
+  tag: 8.1.7.2
+  pullPolicy: "Always"
+  mountPath: "/var/log/coveo-streams-indexer"
+  env:
+    group: "root"
+    server: "lpec5009spkdm01.cardinalhealth.net:8089"
+    index: "ecomm_nxtgen_non-prod"
   resources:
     requests:
-      cpu: "400m"
+      cpu: "500m"
       memory: "256Mi"
     limits:
       cpu: 1
