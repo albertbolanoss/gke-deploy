@@ -11,5 +11,7 @@ data:
   "SPLUNK_START_ARGS": "--accept-license"
   "SPLUNK_FORWARD_SERVER": {{ .Values.splunk.env.server | quote }}
   "SPLUNK_ADD": "monitor {{ .Values.splunk.mountPath }}/{{ .Values.splunk.logFile }} -sourcetype {{ .Values.splunk.env.sourcetype }} -index {{ .Values.splunk.env.index }}"
-  "SPLUNK_GROUP": "root"
+  "SPLUNK_FORWARD_SERVER_USERNAME": admin
+  "SPLUNK_FORWARD_SERVER_PASSWORD": changeme
+  "SPLUNK_PASSWORD": changeme
 {{- end }}
