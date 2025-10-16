@@ -64,9 +64,9 @@ docker exec -it broker sh /opt/kafka/bin/kafka-topics.sh --bootstrap-server loca
 ### Build Docker application Image
 
 ```sh
-docker build -f docker/Dockerfile -t gkedeploy:testlabsdeploy004 .
-docker tag gkedeploy:testlabsdeploy004 luigisamurai/gkedeploy:testlabsdeploy004
-docker push luigisamurai/gkedeploy:testlabsdeploy004
+docker build -f docker/Dockerfile -t gkedeploy:testlabsdeploy009 .
+docker tag gkedeploy:testlabsdeploy009 luigisamurai/gkedeploy:testlabsdeploy009
+docker push luigisamurai/gkedeploy:testlabsdeploy009
 
 docker run --name gkedeploy \
   --network kafka-network \

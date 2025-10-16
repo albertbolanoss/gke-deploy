@@ -10,4 +10,4 @@ data:
   "KAFKA_BOOTSTRAP_SERVERS": {{ .Values.envs.kafkaBootstrapServers | quote }}
   "REDIS_HOST": {{ .Values.envs.redisHost | quote }}
   "ssl_bundle_redis": {{ .Values.envs.sslBundleRedis | quote }}
-  "logging_file_name": "{{ .Values.splunk.mountPath }}/{{ .Values.logFile }}"
+  "logging_file_name": "{{ .Values.splunk.mountPath }}/{{ .Values.splunk.logFile }}"

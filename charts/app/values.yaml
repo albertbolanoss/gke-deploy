@@ -13,7 +13,7 @@ metadata:
 
 image:
   repository: luigisamurai/gkedeploy
-  tag: "sha-ab6cedd"
+  tag: "testlabsdeploy009"
   pullPolicy: Always
 
 deployment:
