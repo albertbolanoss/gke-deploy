@@ -502,3 +502,23 @@ docker run -d \
 
 docker start splunk-onprem
 ```
+
+helm uninstall splunk-op -n splunk-operator
+kubectl delete namespace splunk-operator
+
+helm repo update
+helm pull splunk/splunk-operator --version 2.4.0
+tar -xvf splunk-operator-2.4.0.tgz
+kubectl apply -f splunk-operator/crds/
+
+kubectl get crd | grep splunk
+
+helm install splunk-op splunk/splunk-operator \
+--namespace splunk-operator \
+--create-namespace \
+--version 2.4.0 \
+--set splunk-operator.crds.install=false
+
+kubectl get pods -n splunk-operator -w
+
+kubectl apply -f charts/splunk/splunk-standalone.yaml
