@@ -17,7 +17,7 @@ image:
   pullPolicy: Always
 
 deployment:
-  type: "StatefulSet"
+  type: "Deployment"
   appJar: "/app/gke_deploy.jar"
   persistentVolume:
     moundPath: "/data"
@@ -101,10 +101,10 @@ gcp:
           fileName: "secrets.env"
           key: ""
           envVar: ""
-        - name: "cache-ssl-pem"
-          fileName: "redis-cacert.pem"
-          key: ""
-          envVar: ""
+#        - name: "cache-ssl-pem"
+#          fileName: "redis-cacert.pem"
+#          key: ""
+#          envVar: ""
     splunk:
       secretProvider: "gcp"
       secretSyncEnabled: false
