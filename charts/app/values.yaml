@@ -89,6 +89,23 @@ securityContext: { }
 
 podSecurityContext: { }
 
+keda:
+  enabled: false
+  minReplicas: 0
+  secretEnabled: false
+  secretName: "keda-kafka-secret" # Secret name in K8s
+  trigger: { }
+
+externalSecret:
+  enabled: true
+  secretStoreName: "gcp-secret-store" # Assuming you already created the ClusterSecretSt
+  secretManagerName: "confluent-kafka-creds" # Name in GCP
+  projectId: "safari-gke-462517"
+  region: "us-east1"
+  clusterName: "labs-kube"
+  serviceAccount: "external-secrets-sa"
+  namespace: "external-secrets"
+
 gcp:
   serviceAccount: "gke-sa"
   projectNumber: "230862495170"
