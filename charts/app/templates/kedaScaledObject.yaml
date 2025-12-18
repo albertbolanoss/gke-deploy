@@ -2,12 +2,13 @@
 apiVersion: keda.sh/v1alpha1
 kind: ScaledObject
 metadata:
-  name: {{ include "labs-helmchart-base.buildName" (list . "scale") }}
+  name: labsnpdappdevscal
   labels:
     {{- include "labs-helmchart-base.labels" . | nindent 4 }}
 spec:
   scaleTargetRef:
-    name: {{ include "labs-helmchart-base.buildName" (list . "dep") }}
+    name: labs-npd-app-dev-deploy
+#    name: {{ include "labs-helmchart-base.buildName" (list . "dep") }}
 
   minReplicaCount: {{ .Values.keda.minReplicas }}
   maxReplicaCount: {{ .Values.replicaCount }}
@@ -20,7 +21,7 @@ spec:
   triggers:
     - type: kafka
       metadata:
-        {{- toYaml .Values.keda.trigger | nindent 6 }}
+        {{- toYaml .Values.keda.trigger | nindent 8 }}
       authenticationRef:
         name: {{ include "labs-helmchart-base.buildName" (list . "tauth") }}
 {{- end }}

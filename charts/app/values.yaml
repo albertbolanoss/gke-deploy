@@ -90,11 +90,19 @@ securityContext: { }
 podSecurityContext: { }
 
 keda:
-  enabled: false
-  minReplicas: 0
+  enabled: true
   secretEnabled: false
-  secretName: "keda-kafka-secret" # Secret name in K8s
-  trigger: { }
+  secretName: "labs-npd-app-dev-keda-secret"
+  minReplicas: 0
+  stabilizationWindowSeconds: 300 # Wait 5 minutes before lowering the pods (stability)
+  trigger:
+    bootstrapServers: "broker2:9092"
+    consumerGroup: "LABS_GKE_DEPLOY"
+    topic: "uppercase"
+    lagThreshold: "50000" # Logic: Scale if lag > 50k (one replica by each 50000 messages)
+    offsetResetPolicy: "earliest"
+#    sasl: "plain"
+#    tls: "enable"
 
 externalSecret:
   enabled: true

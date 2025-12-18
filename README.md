@@ -445,14 +445,25 @@ kubectl delete clustersecretstore gcp-secret-store
 kubectl apply -f charts/kedaClusterSecretStore/kedaClusterSecretStore.yaml
 
 helm uninstall external-secrets -n external-secrets
+```
 
+#### Install KEDA
+```sh
+helm repo add keda https://kedacore.github.io/charts
+helm repo update
 
+helm install keda keda/keda --namespace keda --create-namespace
+
+# Wait for the pod are running
+kubectl get pods -n keda
+
+# Get the version o yaml 
+#Esto te devolverá algo como ghcr.io/kedacore/keda:2.12.1 . La parte después de los dos puntos ( : ) es la versión (ej. 2.12.1 ).
+kubectl get deployment keda-operator -n keda -o jsonpath='{.spec.template.spec.containers[0].image}'
 
  
 
 ```
-
-
 #### Install dependencies and service
 
 ```sh
@@ -559,6 +570,18 @@ echo "LBs:    gcloud compute forwarding-rules list --project=$PROJECT_ID"
 
 # Check the pods status
 kubectl get pod -n $NAMESPACE
+
+# Check external secrets
+kubectl get externalsecrets -n $NAMESPACE
+
+# Check the trigger authentication
+kubectl get triggerauthentication -n $NAMESPACE
+
+# Check that secret was created
+kubectl get secret keda-kafka-secret -n $NAMESPACE
+
+# Check Scaled objects
+kubectl get scaledobject -n labs-dev
 
 helm get manifest labs-deploy -n labs-dev | less
 
