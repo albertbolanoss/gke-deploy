@@ -7,8 +7,7 @@ metadata:
     {{- include "labs-helmchart-base.labels" . | nindent 4 }}
 spec:
   scaleTargetRef:
-    name: labs-npd-app-dev-deploy
-#    name: {{ include "labs-helmchart-base.buildName" (list . "dep") }}
+    name: {{ include "labs-helmchart-base.buildName" (list . "deploy") }}
 
   minReplicaCount: {{ .Values.keda.minReplicas }}
   maxReplicaCount: {{ .Values.replicaCount }}
@@ -19,9 +18,11 @@ spec:
           stabilizationWindowSeconds: {{ .Values.keda.stabilizationWindowSeconds }}
 
   triggers:
+  {{- range .Values.keda.triggers }}
     - type: kafka
       metadata:
-        {{- toYaml .Values.keda.trigger | nindent 8 }}
+        {{- toYaml . | nindent 8 }}
       authenticationRef:
-        name: {{ include "labs-helmchart-base.buildName" (list . "tauth") }}
+        name: {{ include "labs-helmchart-base.buildName" (list $ "tauth") }}
+  {{- end }}
 {{- end }}
