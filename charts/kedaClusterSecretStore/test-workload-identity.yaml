@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: workload-identity-test
+  namespace: external-secrets # Asegúrate de que este es el namespace de tu KSA
+spec:
+  serviceAccountName: external-secrets-sa # Asegúrate de que este es el nombre de tu KSA
+  restartPolicy: Never
+  containers:
+    - name: gcloud-sdk
+      image: google/cloud-sdk:latest
+      command: ["/bin/bash", "-c", "sleep infinity"] # Mantener el pod corriendo
+      env:
+        - name: GOOGLE_APPLICATION_CREDENTIALS
+          value: /var/run/secrets/tokens/gcp-ksa/google-application-credentials.json # Esto es para algunas libs, pero el metadata server es lo principal

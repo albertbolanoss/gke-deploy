@@ -1,0 +1,19 @@
+{{- if .Values.externalSecret.enabled }}
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: {{ include "labs-helmchart-base.buildName" (list . "tauth") }}
+  labels:
+    {{- include "labs-helmchart-base.labels" . | nindent 4 }}
+spec:
+  secretTargetRef:
+    - parameter: username
+      name: {{ .Values.keda.secretName | quote }}
+      key: sasl_username
+    - parameter: password
+      name: {{ .Values.keda.secretName | quote }}
+      key: sasl_password
+    - parameter: tls
+      name: {{ .Values.keda.secretName | quote }}
+      key: tls_enabled
+{{- end }}

@@ -1,0 +1,28 @@
+{{- if .Values.keda.enabled }}
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: labsnpdappdevscal
+  labels:
+    {{- include "labs-helmchart-base.labels" . | nindent 4 }}
+spec:
+  scaleTargetRef:
+    name: {{ include "labs-helmchart-base.buildName" (list . "deploy") }}
+
+  minReplicaCount: {{ .Values.keda.minReplicas }}
+  maxReplicaCount: {{ .Values.replicaCount }}
+  advanced:
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleDown:
+          stabilizationWindowSeconds: {{ .Values.keda.stabilizationWindowSeconds }}
+
+  triggers:
+  {{- range .Values.keda.triggers }}
+    - type: kafka
+      metadata:
+        {{- toYaml . | nindent 8 }}
+      authenticationRef:
+        name: {{ include "labs-helmchart-base.buildName" (list $ "tauth") }}
+  {{- end }}
+{{- end }}

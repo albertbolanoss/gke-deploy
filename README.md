@@ -116,6 +116,10 @@ REDIS_SECRET=labs-soft-npd-gke-deploy-dev-redis-password
 KAFKA_SECRET=labs-soft-npd-gke-deploy-dev-kafka-password
 REDIS_CACERT=cache-ssl-pem
 GSA_EMAIL="${GSA}@${PROJECT_ID}.iam.gserviceaccount.com"
+ESO_NAMESPACE=external-secrets
+GSA_ESO=eso-gsa
+KSA_ESO=external-secrets-sa
+KEDA_SECRET_GCP_NAME=confluent-kafka-creds
 ```
 
 #### Enable needed APIs
@@ -149,13 +153,20 @@ gcloud container clusters create "$CLUSTER_NAME" \
   --workload-pool="$PROJECT_ID.svc.id.goog" \
   --monitoring=NONE \
   --enable-autoscaling --min-nodes 1 --max-nodes 1
+
 ```
 
 #### Get kubectl credential and create namespace
 
 ```sh
+# Get credential when ot create the autopilot cluster
 gcloud container clusters get-credentials "$CLUSTER_NAME" \
   --region="$REGION" \
+  --project="$PROJECT_ID"
+  
+# Get credential when ot create the standard cluster
+gcloud container clusters get-credentials "$CLUSTER_NAME" \
+  --zone="$ZONE" \
   --project="$PROJECT_ID"
 
 kubectl create namespace $NAMESPACE
@@ -187,6 +198,7 @@ gcloud secrets create $REDIS_CACERT \
     --project=$PROJECT_ID \
     --replication-policy="automatic" \
     --data-file=charts/secrets/redis-cacert.pem
+  
 
 # Individual secrets as text for GCP with Sync (secretProvider: gcp and secretSyncEnabled: true)
 echo -n 'password' | gcloud secrets create $REDIS_SECRET \
@@ -281,7 +293,7 @@ kubectl create serviceaccount "$KSA" -n "$NAMESPACE" || true
 # GSA
 gcloud iam service-accounts create "$GSA" \
   --display-name="GSA for Secrets Store CSI" \
-  --project="$PROJECT_ID"
+  --project="$PROJECT_ID" | true
 
 GSA_EMAIL="${GSA}@${PROJECT_ID}.iam.gserviceaccount.com"
 
@@ -327,6 +339,131 @@ gcloud secrets get-iam-policy $KAFKA_SECRET --project "$PROJECT_ID"
 
 ```
 
+#### Setting Cluster Secret Store
+
+```sh
+# Check the version of the Cluster Secrets Store and External secrets Operator (yaml versions)
+kubectl api-resources --api-group=external-secrets.io
+
+# Enable APIs IAM and Secret Manager
+gcloud services enable iam.googleapis.com secretmanager.googleapis.com --project=${PROJECT_ID}
+
+# Create the secret manager and upload new version
+gcloud secrets create $KEDA_SECRET_GCP_NAME --project=$PROJECT_ID --replication-policy="automatic"
+gcloud secrets versions add $KEDA_SECRET_GCP_NAME --data-file=charts/secrets/keda-kafka-secret.json
+
+
+# Create GSA for External Secret
+gcloud iam service-accounts create ${GSA_ESO} \
+    --display-name "External Secrets Operator GSA" \
+    --project=${PROJECT_ID}
+
+# Give permission to GSA to access Secret Manager     
+gcloud projects add-iam-policy-binding ${PROJECT_ID} \
+    --member="serviceAccount:${GSA_ESO}@${PROJECT_ID}.iam.gserviceaccount.com" \
+    --role="roles/secretmanager.secretAccessor" \
+    --project=${PROJECT_ID}
+
+# Give permission to GSA to View secret managers    
+gcloud projects add-iam-policy-binding ${PROJECT_ID} \
+    --member="serviceAccount:${GSA_ESO}@${PROJECT_ID}.iam.gserviceaccount.com" \
+    --role="roles/secretmanager.viewer" \
+    --project=${PROJECT_ID}
+    
+# Check the permissions
+gcloud projects get-iam-policy ${PROJECT_ID} \
+  --format="json"
+
+
+# Create Namespace and KSA
+kubectl create namespace ${ESO_NAMESPACE}
+
+kubectl create serviceaccount ${KSA_ESO} \
+    --namespace ${ESO_NAMESPACE}
+
+# Anotar la KSA con la GSA
+# Establecer la federación de Workload Identity
+# Ahora, vincularemos la KSA de Kubernetes con la GSA de Google Cloud. Esto permite que los pods que usan la KSA actúen como la GSA.
+gcloud iam service-accounts add-iam-policy-binding \
+    ${GSA_ESO}@${PROJECT_ID}.iam.gserviceaccount.com \
+    --role="roles/iam.workloadIdentityUser" \
+    --member="serviceAccount:${PROJECT_ID}.svc.id.goog[${ESO_NAMESPACE}/${KSA_ESO}]" \
+    --project=${PROJECT_ID}
+
+kubectl annotate serviceaccount ${KSA_ESO} \
+    --namespace ${ESO_NAMESPACE} \
+    iam.gke.io/gcp-service-account=${GSA_ESO}@${PROJECT_ID}.iam.gserviceaccount.com
+ 
+# Instalar el operador External Secrets 
+helm repo add external-secrets https://charts.external-secrets.io
+
+helm install external-secrets external-secrets/external-secrets \
+    -n ${ESO_NAMESPACE} \
+    --set installCRDs=true
+
+# Desplegar el ClusterSecretStore 
+kubectl apply -f charts/kedaClusterSecretStore/kedaClusterSecretStore.yaml
+
+# Checking 
+kubectl get clustersecretstore gcp-secret-store # should be READY
+kubectl logs -n external-secrets -l app.kubernetes.io/name=external-secrets # No errors
+
+
+##### Checking issues (when it's not working)  
+
+# Reiniciar los pods de External Secrets: 
+kubectl rollout restart deployment external-secrets -n external-secrets
+kubectl rollout restart deployment external-secrets-webhook -n external-secrets
+
+# Wait some minutes and then check the clustersecretstore status
+kubectl get clustersecretstore gcp-secret-store -o yaml
+kubectl logs -n external-secrets -l app.kubernetes.io/name=external-secrets
+
+# Create a pod to check permissions (optional)
+kubectl apply -f charts/kedaClusterSecretStore/test-workload-identity.yaml
+kubectl get pod workload-identity-test -n external-secrets
+kubectl exec -it workload-identity-test -n external-secrets -- bash
+# in container terminal, should return a token
+gcloud secrets list --project=safari-gke-462517
+exit
+kubectl delete -f charts/kedaClusterSecretStore/test-workload-identity.yaml
+
+# Re install 
+helm uninstall external-secrets -n external-secrets
+# Wait for deletion of pods
+kubectl get pods -n external-secrets
+# Install again
+helm install external-secrets external-secrets/external-secrets \
+    -n external-secrets \
+    --set installCRDs=true
+
+# Wait for pods
+kubectl get pods -n external-secrets    
+
+# Re install Cluster Secret store 
+kubectl delete clustersecretstore gcp-secret-store
+kubectl apply -f charts/kedaClusterSecretStore/kedaClusterSecretStore.yaml
+
+helm uninstall external-secrets -n external-secrets
+```
+
+#### Install KEDA
+```sh
+helm repo add keda https://kedacore.github.io/charts
+helm repo update
+
+helm install keda keda/keda --namespace keda --create-namespace
+
+# Wait for the pod are running
+kubectl get pods -n keda
+
+# Get the version o yaml 
+#Esto te devolverá algo como ghcr.io/kedacore/keda:2.12.1 . La parte después de los dos puntos ( : ) es la versión (ej. 2.12.1 ).
+kubectl get deployment keda-operator -n keda -o jsonpath='{.spec.template.spec.containers[0].image}'
+
+ 
+
+```
 #### Install dependencies and service
 
 ```sh
@@ -388,6 +525,8 @@ kubectl port-forward -n splunk-operator svc/splunk-s1-standalone 8000:8000
 # Delete the secret Managers file
 gcloud secrets delete $ENV_VARS_SECRET --quiet
 
+gcloud secrets delete $KEDA_SECRET_GCP_NAME --quiet
+
 gcloud secrets delete $REDIS_CACERT --quiet
 
 gcloud secrets delete $REDIS_SECRET --quiet
@@ -409,9 +548,19 @@ gcloud container clusters delete "$CLUSTER_NAME" \
 # Delete GSA (for standard cluster)
 gcloud iam service-accounts delete "$GSA@$PROJECT_ID.iam.gserviceaccount.com" \
   --project="$PROJECT_ID"
+  
+# Borrar la cuenta de External Secrets Operator (IMPORTANTE para limpieza total)
+gcloud iam service-accounts delete "${GSA_ESO}@${PROJECT_ID}.iam.gserviceaccount.com" \
+  --project="$PROJECT_ID" \
+  --quiet || true
 
 # Delete Persistent Disk
 gcloud compute disks delete [NAME] --zone=$ZONE
+
+# Check Disks
+
+echo "Discos: gcloud compute disks list --project=$PROJECT_ID --filter=\"zone:($ZONE)\""
+echo "LBs:    gcloud compute forwarding-rules list --project=$PROJECT_ID"
 
 ```
 
@@ -421,6 +570,18 @@ gcloud compute disks delete [NAME] --zone=$ZONE
 
 # Check the pods status
 kubectl get pod -n $NAMESPACE
+
+# Check external secrets
+kubectl get externalsecrets -n $NAMESPACE
+
+# Check the trigger authentication
+kubectl get triggerauthentication -n $NAMESPACE
+
+# Check that secret was created
+kubectl get secret keda-kafka-secret -n $NAMESPACE
+
+# Check Scaled objects
+kubectl get scaledobject -n labs-dev
 
 helm get manifest labs-deploy -n labs-dev | less
 

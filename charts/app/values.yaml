@@ -17,7 +17,7 @@ image:
   pullPolicy: Always
 
 deployment:
-  type: "StatefulSet"
+  type: "Deployment"
   appJar: "/app/gke_deploy.jar"
   persistentVolume:
     moundPath: "/data"
@@ -89,6 +89,31 @@ securityContext: { }
 
 podSecurityContext: { }
 
+keda:
+  enabled: true
+  secretEnabled: false
+  secretName: "labs-npd-app-dev-keda-secret"
+  minReplicas: 0
+  stabilizationWindowSeconds: 300 # Wait 5 minutes before lowering the pods (stability)
+  triggers:
+    - bootstrapServers: "broker2:9092"
+      consumerGroup: "LABS_GKE_DEPLOY"
+      topic: "uppercase"
+      lagThreshold: "50000" # Logic: Scale if lag > 50k (one replica by each 50000 messages)
+      offsetResetPolicy: "earliest"
+#    sasl: "plain"
+#    tls: "enable"
+
+externalSecret:
+  enabled: true
+  secretStoreName: "gcp-secret-store" # Assuming you already created the ClusterSecretSt
+  secretManagerName: "confluent-kafka-creds" # Name in GCP
+  projectId: "safari-gke-462517"
+  region: "us-east1"
+  clusterName: "labs-kube"
+  serviceAccount: "external-secrets-sa"
+  namespace: "external-secrets"
+
 gcp:
   serviceAccount: "gke-sa"
   projectNumber: "230862495170"
@@ -101,10 +126,10 @@ gcp:
           fileName: "secrets.env"
           key: ""
           envVar: ""
-        - name: "cache-ssl-pem"
-          fileName: "redis-cacert.pem"
-          key: ""
-          envVar: ""
+#        - name: "cache-ssl-pem"
+#          fileName: "redis-cacert.pem"
+#          key: ""
+#          envVar: ""
     splunk:
       secretProvider: "gcp"
       secretSyncEnabled: false
