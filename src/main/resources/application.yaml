@@ -3,6 +3,8 @@ server:
 spring:
   application:
     name: LABS_GKE_DEPLOY
+  jmx:
+    enabled: true
   kafka:
     enabled: false
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
