@@ -23,8 +23,10 @@ import java.util.Arrays;
  * Applies common tags to all metrics for consistent identification in monitoring systems.
  * Registers JVM metrics binders for comprehensive JVM observability.
  * Integrates KafkaStreamsMicrometerListener with Kafka Streams for metrics collection.
+ * Enables scheduled metrics collection for RocksDB.
  */
 @Configuration
+@org.springframework.scheduling.annotation.EnableScheduling
 public class MetricsConfiguration {
 
     private static final Logger log = LoggerFactory.getLogger(MetricsConfiguration.class);
@@ -139,34 +141,54 @@ public class MetricsConfiguration {
     }
 
     /**
+     * Registers RocksDBMetricsCollector to capture RocksDB state store metrics.
+     * The collector periodically reads RocksDB statistics and registers them as
+     * Micrometer metrics for export to monitoring platforms like Dynatrace.
+     *
+     * Requirements: 11.3
+     *
+     * @param meterRegistry the Micrometer registry to register metrics
+     * @return RocksDBMetricsCollector instance
+     */
+    @Bean
+    public com.labs.repartitioner.metrics.RocksDBMetricsCollector rocksDBMetricsCollector(
+            MeterRegistry meterRegistry) {
+        com.labs.repartitioner.metrics.RocksDBMetricsCollector collector =
+                new com.labs.repartitioner.metrics.RocksDBMetricsCollector(meterRegistry);
+        collector.bindTo(meterRegistry);
+        log.info("RocksDBMetricsCollector registered successfully");
+        return collector;
+    }
+
+    /**
      * Configures the StreamsBuilderFactoryBean to integrate with KafkaStreamsMicrometerListener.
      * This method is called automatically by Spring after the StreamsBuilderFactoryBean is created
      * by @EnableKafkaStreams. It registers the listener and injects the KafkaStreams instance.
-     * 
+     *
      * @param factoryBean the StreamsBuilderFactoryBean created by @EnableKafkaStreams
      * @param listener the KafkaStreamsMicrometerListener to register
      */
     @Bean
     public org.springframework.beans.factory.config.BeanPostProcessor kafkaStreamsListenerIntegration(
             com.labs.repartitioner.metrics.KafkaStreamsMicrometerListener listener) {
-        
+
         return new org.springframework.beans.factory.config.BeanPostProcessor() {
             @Override
             public Object postProcessAfterInitialization(Object bean, String beanName) {
                 if (bean instanceof StreamsBuilderFactoryBean) {
                     StreamsBuilderFactoryBean factoryBean = (StreamsBuilderFactoryBean) bean;
-                    
+
                     log.info("Configuring KafkaStreamsMicrometerListener integration for bean: {}", beanName);
-                    
+
                     // Register the listener as a state listener
                     factoryBean.setStateListener(listener);
-                    
+
                     // Set up a callback to inject the KafkaStreams instance after initialization
                     factoryBean.setKafkaStreamsCustomizer(kafkaStreams -> {
                         log.info("Injecting KafkaStreams instance into listener");
                         listener.setKafkaStreams(kafkaStreams);
                     });
-                    
+
                     log.info("KafkaStreamsMicrometerListener integration configured successfully");
                 }
                 return bean;
@@ -175,3 +197,4 @@ public class MetricsConfiguration {
     }
 
 }
+

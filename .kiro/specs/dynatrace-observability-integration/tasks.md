@@ -86,8 +86,8 @@ La implementación sigue un enfoque incremental: primero configuramos las depend
   - Verificar que /actuator/prometheus expone métricas de Kafka Streams con tags apropiados
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 8. Implementar CustomRocksDBConfigSetter
-  - [ ] 8.1 Crear clase CustomRocksDBConfigSetter
+- [x] 8. Implementar CustomRocksDBConfigSetter
+  - [x] 8.1 Crear clase CustomRocksDBConfigSetter
     - Implementar interfaz RocksDBConfigSetter de Kafka Streams
     - Implementar método setConfig para habilitar Statistics en RocksDB
     - Implementar método close para limpieza
@@ -95,17 +95,17 @@ La implementación sigue un enfoque incremental: primero configuramos las depend
     - Implementar método estático getStoreStatistics para acceso externo
     - _Requirements: 7.1, 7.2, 7.3_
   
-  - [ ] 8.2 Configurar rocksdb.config.setter en application.yaml
+  - [x] 8.2 Configurar rocksdb.config.setter en application.yaml
     - Agregar propiedad spring.kafka.streams.properties.rocksdb.config.setter
     - _Requirements: 7.4_
   
-  - [ ]* 8.3 Write unit tests for CustomRocksDBConfigSetter
+  - [x] 8.3 Write unit tests for CustomRocksDBConfigSetter
     - Verificar que Statistics se habilita correctamente
     - Verificar que Statistics está disponible después de inicialización
     - _Requirements: 7.2, 7.3_
 
-- [ ] 9. Implementar RocksDBMetricsCollector
-  - [ ] 9.1 Crear clase RocksDBMetricsCollector
+- [x] 9. Implementar RocksDBMetricsCollector
+  - [x] 9.1 Crear clase RocksDBMetricsCollector
     - Implementar interfaz MeterBinder de Micrometer
     - Implementar método bindTo para registrar métricas iniciales
     - Implementar método collectMetrics con @Scheduled para recolección periódica
@@ -114,21 +114,21 @@ La implementación sigue un enfoque incremental: primero configuramos las depend
     - Incluir manejo de errores con try-catch y logging
     - _Requirements: 8.1, 8.2, 8.3, 8.4, 9.1, 9.2, 9.3, 9.4, 9.5, 10.1, 10.2, 10.3, 10.4, 10.5, 11.3, 13.2_
   
-  - [ ] 9.2 Registrar RocksDBMetricsCollector como bean en MetricsConfiguration
+  - [x] 9.2 Registrar RocksDBMetricsCollector como bean en MetricsConfiguration
     - Crear bean que inyecta MeterRegistry
     - Habilitar @EnableScheduling en la configuración
     - _Requirements: 11.3_
   
-  - [ ]* 9.3 Write property test for RocksDB metrics tags
+  - [x] 9.3 Write property test for RocksDB metrics tags
     - **Property 4: RocksDB Metrics Include State Store Tags**
     - **Validates: Requirements 8.5, 12.3**
   
-  - [ ]* 9.4 Write unit tests for RocksDBMetricsCollector
+  - [x] 9.4 Write unit tests for RocksDBMetricsCollector
     - Verificar que métricas de memoria, operaciones, y compactación están presentes
     - Verificar manejo de errores cuando Statistics no está disponible
     - _Requirements: 8.1, 8.2, 8.3, 8.4, 9.1, 9.2, 9.3, 9.4, 9.5, 10.1, 10.2, 10.3, 10.4, 10.5, 13.2_
 
-- [ ] 10. Checkpoint - Verificar métricas de RocksDB localmente
+- [x] 10. Checkpoint - Verificar métricas de RocksDB localmente
   - Iniciar la aplicación con Kafka habilitado
   - Procesar mensajes que generen operaciones en state stores
   - Verificar que /actuator/prometheus expone métricas de RocksDB con tags apropiados

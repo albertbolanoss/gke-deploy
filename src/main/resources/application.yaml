@@ -11,6 +11,8 @@ spring:
     streams:
       auto-startup: ${spring.kafka.enabled}
       application-id: ${spring.application.name}
+      properties:
+        rocksdb.config.setter: com.labs.repartitioner.metrics.CustomRocksDBConfigSetter
     admin:
       auto-create: true
   data:
