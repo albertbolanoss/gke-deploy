@@ -199,13 +199,24 @@ class MetricsConfigurationTest {
         }
     }
 
+    // KafkaStreamsMicrometerListener Bean Test - Requirement: 11.2
+
+    @Test
+    void kafkaStreamsMicrometerListener_shouldCreateBean() {
+        // Act
+        var listener = metricsConfiguration.kafkaStreamsMicrometerListener(meterRegistry);
+
+        // Assert
+        assertThat(listener).isNotNull();
+        assertThat(listener).isInstanceOf(com.labs.repartitioner.metrics.KafkaStreamsMicrometerListener.class);
+    }
+
     // JVM Metrics Availability Tests - Requirements: 3.1, 3.2, 3.3, 3.4, 3.5
 
     @Test
     void classLoaderMetrics_shouldBeRegistered() {
         // Act
-        var classLoaderMetrics = metricsConfiguration.classLoaderMetrics();
-        classLoaderMetrics.bindTo(meterRegistry);
+        var classLoaderMetrics = metricsConfiguration.classLoaderMetrics(meterRegistry);
 
         // Assert
         assertThat(classLoaderMetrics).isNotNull();
@@ -219,8 +230,7 @@ class MetricsConfigurationTest {
     @Test
     void jvmMemoryMetrics_shouldBeRegistered() {
         // Act
-        var jvmMemoryMetrics = metricsConfiguration.jvmMemoryMetrics();
-        jvmMemoryMetrics.bindTo(meterRegistry);
+        var jvmMemoryMetrics = metricsConfiguration.jvmMemoryMetrics(meterRegistry);
 
         // Assert
         assertThat(jvmMemoryMetrics).isNotNull();
@@ -242,8 +252,7 @@ class MetricsConfigurationTest {
     @Test
     void jvmGcMetrics_shouldBeRegistered() {
         // Act
-        var jvmGcMetrics = metricsConfiguration.jvmGcMetrics();
-        jvmGcMetrics.bindTo(meterRegistry);
+        var jvmGcMetrics = metricsConfiguration.jvmGcMetrics(meterRegistry);
 
         // Assert
         assertThat(jvmGcMetrics).isNotNull();
@@ -257,8 +266,7 @@ class MetricsConfigurationTest {
     @Test
     void processorMetrics_shouldBeRegistered() {
         // Act
-        var processorMetrics = metricsConfiguration.processorMetrics();
-        processorMetrics.bindTo(meterRegistry);
+        var processorMetrics = metricsConfiguration.processorMetrics(meterRegistry);
 
         // Assert
         assertThat(processorMetrics).isNotNull();
@@ -276,8 +284,7 @@ class MetricsConfigurationTest {
     @Test
     void jvmThreadMetrics_shouldBeRegistered() {
         // Act
-        var jvmThreadMetrics = metricsConfiguration.jvmThreadMetrics();
-        jvmThreadMetrics.bindTo(meterRegistry);
+        var jvmThreadMetrics = metricsConfiguration.jvmThreadMetrics(meterRegistry);
 
         // Assert
         assertThat(jvmThreadMetrics).isNotNull();
@@ -299,18 +306,11 @@ class MetricsConfigurationTest {
     @Test
     void allJvmMetrics_shouldBePresentInRegistry() {
         // Arrange
-        var classLoaderMetrics = metricsConfiguration.classLoaderMetrics();
-        var jvmMemoryMetrics = metricsConfiguration.jvmMemoryMetrics();
-        var jvmGcMetrics = metricsConfiguration.jvmGcMetrics();
-        var processorMetrics = metricsConfiguration.processorMetrics();
-        var jvmThreadMetrics = metricsConfiguration.jvmThreadMetrics();
-
-        // Act - Bind all metrics
-        classLoaderMetrics.bindTo(meterRegistry);
-        jvmMemoryMetrics.bindTo(meterRegistry);
-        jvmGcMetrics.bindTo(meterRegistry);
-        processorMetrics.bindTo(meterRegistry);
-        jvmThreadMetrics.bindTo(meterRegistry);
+        var classLoaderMetrics = metricsConfiguration.classLoaderMetrics(meterRegistry);
+        var jvmMemoryMetrics = metricsConfiguration.jvmMemoryMetrics(meterRegistry);
+        var jvmGcMetrics = metricsConfiguration.jvmGcMetrics(meterRegistry);
+        var processorMetrics = metricsConfiguration.processorMetrics(meterRegistry);
+        var jvmThreadMetrics = metricsConfiguration.jvmThreadMetrics(meterRegistry);
 
         // Assert - Verify all JVM metric categories are present
         List<Meter> allMeters = meterRegistry.getMeters();

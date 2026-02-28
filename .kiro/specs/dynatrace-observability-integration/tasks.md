@@ -43,13 +43,13 @@ La implementación sigue un enfoque incremental: primero configuramos las depend
     - Verificar que métricas de CPU, memoria, GC, y threads están presentes en el registry
     - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
 
-- [ ] 5. Checkpoint - Verificar métricas JVM localmente
+- [x] 5. Checkpoint - Verificar métricas JVM localmente
   - Iniciar la aplicación localmente y verificar que /actuator/prometheus expone métricas de JVM
   - Verificar que /actuator/metrics lista las métricas disponibles
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 6. Implementar KafkaStreamsMicrometerListener
-  - [ ] 6.1 Crear clase KafkaStreamsMicrometerListener
+  - [x] 6.1 Crear clase KafkaStreamsMicrometerListener
     - Implementar KafkaStreams.StateListener
     - Implementar método onChange para capturar cambios de estado
     - Implementar método registerKafkaStreamsMetrics para registrar métricas nativas
@@ -57,30 +57,30 @@ La implementación sigue un enfoque incremental: primero configuramos las depend
     - Incluir manejo de errores con try-catch y logging
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 5.1, 5.2, 5.3, 5.4, 5.5, 6.1, 6.2, 6.3, 11.2, 13.3_
   
-  - [ ] 6.2 Registrar KafkaStreamsMicrometerListener como bean en MetricsConfiguration
+  - [x] 6.2 Registrar KafkaStreamsMicrometerListener como bean en MetricsConfiguration
     - Crear bean que inyecta MeterRegistry
     - _Requirements: 11.2_
   
-  - [ ] 6.3 Integrar listener con Kafka Streams en configuración existente
+  - [x] 6.3 Integrar listener con Kafka Streams en configuración existente
     - Modificar configuración de Kafka Streams para registrar el listener
     - Inyectar KafkaStreams instance en el listener después de inicialización
     - _Requirements: 5.5_
   
-  - [ ]* 6.4 Write property test for Kafka Streams metrics tags
+  - [x] 6.4 Write property test for Kafka Streams metrics tags
     - **Property 2: Kafka Streams Metrics Include Specific Tags**
     - **Validates: Requirements 4.5, 12.2**
   
-  - [ ]* 6.5 Write property test for repartitioning metrics tags
+  - [x] 6.5 Write property test for repartitioning metrics tags
     - **Property 3: Repartitioning Metrics Include Topology Node Tags**
     - **Validates: Requirements 6.4**
   
-  - [ ]* 6.6 Write unit tests for KafkaStreamsMicrometerListener
+  - [x] 6.6 Write unit tests for KafkaStreamsMicrometerListener
     - Verificar que el listener se registra correctamente
     - Verificar que métricas de throughput, latencia, y lag están presentes
     - Verificar manejo de errores cuando métricas no están disponibles
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 13.3_
 
-- [ ] 7. Checkpoint - Verificar métricas de Kafka Streams localmente
+- [x] 7. Checkpoint - Verificar métricas de Kafka Streams localmente
   - Iniciar la aplicación con Kafka habilitado
   - Procesar algunos mensajes a través de la topología
   - Verificar que /actuator/prometheus expone métricas de Kafka Streams con tags apropiados
