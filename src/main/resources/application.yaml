@@ -6,7 +6,7 @@ spring:
   jmx:
     enabled: true
   kafka:
-    enabled: false
+    enabled: true
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
     streams:
       auto-startup: ${spring.kafka.enabled}
