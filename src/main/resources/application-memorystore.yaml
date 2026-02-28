@@ -41,8 +41,23 @@ management:
           include: ping #,redis,kafkaHealthCheck
         liveness:
           include: ping
+    metrics:
+      enabled: true
+    prometheus:
+      enabled: true
   endpoints:
-    web.exposure.include: health,info
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+      base-path: /actuator
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+    tags:
+      application: ${spring.application.name}
+      environment: ${ENVIRONMENT:local}
+      host: ${HOSTNAME:localhost}
 
 
 health:
