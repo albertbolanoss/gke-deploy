@@ -668,3 +668,19 @@ Alert when flush operations are backing up.
 - [Kafka Streams Monitoring](https://kafka.apache.org/documentation/streams/developer-guide/monitoring)
 - [RocksDB Statistics](https://github.com/facebook/rocksdb/wiki/Statistics)
 
+
+
+kafka.streams.consumer.coordinator.metrics.commit.latency.avg
+kafka.streams.consumer.coordinator.metrics.commit.latency.max
+kafka.streams.consumer.fetch.manager.metrics.bytes.consumed.rate
+kafka.streams.consumer.fetch.manager.metrics.records.consumed.rate
+kafka.streams.consumer.fetch.manager.metrics.records.lag.max
+kafka.streams.producer.metrics.record.send.rate
+kafka.streams.stream.thread.metrics.poll.latency.avg
+kafka.streams.stream.thread.metrics.process.rate
+
+rocksdb_bytes_written
+rocksdb_bytes_read
+rocksdb_memtable_size_all
+rocksdb_compact_write_bytes
+rocksdb_db_get_micros

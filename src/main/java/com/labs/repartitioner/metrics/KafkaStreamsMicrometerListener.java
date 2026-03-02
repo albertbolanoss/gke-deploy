@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Listener that captures native Kafka Streams metrics and registers them in Micrometer.
@@ -78,6 +79,32 @@ public class KafkaStreamsMicrometerListener implements KafkaStreams.StateListene
      * Registers all Kafka Streams native metrics as Micrometer gauges.
      * Iterates through all available metrics and registers them with appropriate tags.
      */
+//    private void registerKafkaStreamsMetrics() {
+//        if (kafkaStreams == null) {
+//            log.warn("KafkaStreams instance is null, cannot register metrics");
+//            return;
+//        }
+//
+//        try {
+//            Map<MetricName, ? extends Metric> metrics = kafkaStreams.metrics();
+//            log.info("Found {} Kafka Streams metrics to register", metrics.size());
+//
+//            for (Map.Entry<MetricName, ? extends Metric> entry : metrics.entrySet()) {
+//                try {
+//                    MetricName metricName = entry.getKey();
+//                    Metric metric = entry.getValue();
+//
+//                    registerMetricAsGauge(metricName, metric);
+//                } catch (Exception e) {
+//                    log.warn("Failed to register metric: {}", entry.getKey().name(), e);
+//                    // Continue with other metrics
+//                }
+//            }
+//        } catch (Exception e) {
+//            log.error("Failed to retrieve Kafka Streams metrics", e);
+//        }
+//    }
+
     private void registerKafkaStreamsMetrics() {
         if (kafkaStreams == null) {
             log.warn("KafkaStreams instance is null, cannot register metrics");
@@ -86,23 +113,65 @@ public class KafkaStreamsMicrometerListener implements KafkaStreams.StateListene
 
         try {
             Map<MetricName, ? extends Metric> metrics = kafkaStreams.metrics();
-            log.info("Found {} Kafka Streams metrics to register", metrics.size());
+            log.info("Found {} total Kafka Streams metrics", metrics.size());
 
-            for (Map.Entry<MetricName, ? extends Metric> entry : metrics.entrySet()) {
-                try {
-                    MetricName metricName = entry.getKey();
-                    Metric metric = entry.getValue();
-                    
-                    registerMetricAsGauge(metricName, metric);
-                } catch (Exception e) {
-                    log.warn("Failed to register metric: {}", entry.getKey().name(), e);
-                    // Continue with other metrics
+            Set<String> criticalMetrics = Set.of(
+                    // Thread metrics
+                    "commit-latency-avg", "commit-latency-max", "commit-rate",
+                    "process-latency-avg", "process-latency-max", "process-rate",
+                    "poll-latency-avg", "poll-rate",
+
+                    // Consumer metrics
+                    "records-consumed-rate", "bytes-consumed-rate",
+                    "records-lag", "records-lag-max",
+                    "fetch-latency-avg", "fetch-latency-max",
+
+                    // Producer metrics
+                    "record-send-rate", "byte-rate",
+                    "record-error-rate", "record-retry-rate",
+
+                    // Task metrics
+                    "task-created-rate", "task-closed-rate"
+            );
+
+            int registeredCount = 0;
+            int matchedCount = 0;
+
+            // First pass: log all available metric names to understand what we have
+            log.info("=== Available Kafka Streams Metric Names (first 20) ===");
+            int count = 0;
+            for (MetricName metricName : metrics.keySet()) {
+                if (count++ < 20) {
+                    log.info("Metric: name='{}', group='{}', tags={}", 
+                            metricName.name(), metricName.group(), metricName.tags());
                 }
             }
+
+            // Second pass: register critical metrics
+            for (Map.Entry<MetricName, ? extends Metric> entry : metrics.entrySet()) {
+                MetricName metricName = entry.getKey();
+
+                // Solo registrar métricas críticas
+                if (criticalMetrics.contains(metricName.name())) {
+                    matchedCount++;
+                    try {
+                        registerMetricAsGauge(metricName, entry.getValue());
+                        registeredCount++;
+                        log.info("Registered critical metric: {}", metricName.name());
+                    } catch (Exception e) {
+                        log.warn("Failed to register metric: {}", metricName.name(), e);
+                    }
+                }
+            }
+
+            log.info("Registered {} out of {} matched critical metrics (total available: {})", 
+                    registeredCount, matchedCount, metrics.size());
+
         } catch (Exception e) {
             log.error("Failed to retrieve Kafka Streams metrics", e);
         }
     }
+
 
     /**
      * Registers a single Kafka Streams metric as a Micrometer gauge.
