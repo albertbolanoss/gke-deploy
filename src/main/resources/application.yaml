@@ -3,12 +3,16 @@ server:
 spring:
   application:
     name: LABS_GKE_DEPLOY
+  jmx:
+    enabled: true
   kafka:
-    enabled: false
+    enabled: true
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
     streams:
       auto-startup: ${spring.kafka.enabled}
       application-id: ${spring.application.name}
+      properties:
+        rocksdb.config.setter: com.labs.repartitioner.metrics.CustomRocksDBConfigSetter
     admin:
       auto-create: true
   data:
@@ -32,8 +36,25 @@ management:
           include: ping #,redis,kafkaHealthCheck
         liveness:
           include: ping
+    metrics:
+      enabled: true
+    prometheus:
+      enabled: true
   endpoints:
-    web.exposure.include: health,info
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+      base-path: /actuator
+  metrics:
+    export:
+      jmx:
+        enabled: true
+      prometheus:
+        enabled: true
+    tags:
+      application: ${spring.application.name}
+      environment: ${ENVIRONMENT:local}
+      host: ${HOSTNAME:localhost}
 
 
 health:

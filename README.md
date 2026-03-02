@@ -2,7 +2,7 @@
 
 ## Pre requisites
 
-- Java 17
+- Java 21
 - Kafka, Redis or Docker
 
 ### Create Kafka Broker and Redis

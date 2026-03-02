@@ -9,8 +9,10 @@ group = 'com.labs'
 version = ''
 
 java {
+//	sourceCompatibility = JavaVersion.VERSION_21
+//	targetCompatibility = JavaVersion.VERSION_21
 	toolchain {
-		languageVersion = JavaLanguageVersion.of(17)
+		languageVersion = JavaLanguageVersion.of(21)
 	}
 }
 
@@ -26,12 +28,21 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 	implementation("io.lettuce:lettuce-core:6.8.1.RELEASE")
+	
+	// Micrometer dependencies for metrics collection
+	implementation 'io.micrometer:micrometer-core'
+	implementation 'io.micrometer:micrometer-registry-prometheus'
+	implementation 'io.micrometer:micrometer-registry-jmx'
+	
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 	testImplementation 'org.springframework.kafka:spring-kafka-test'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation "org.apache.kafka:kafka-streams-test-utils"
 	testImplementation "org.junit.jupiter:junit-jupiter:5.10.2"
+	
+	// jqwik for property-based testing
+	testImplementation "net.jqwik:jqwik:1.8.2"
 }
 
 tasks.named('bootBuildImage') {

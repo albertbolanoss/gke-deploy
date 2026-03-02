@@ -1,4 +1,4 @@
-FROM eclipse-temurin:17.0.8.1_1-jre-jammy
+FROM eclipse-temurin:21-jre-jammy
 
 ENV JAR_NAME=gke_deploy
 ENV APP_PORT=9081
