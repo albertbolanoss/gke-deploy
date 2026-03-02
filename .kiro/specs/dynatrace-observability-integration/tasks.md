@@ -134,12 +134,12 @@ La implementación sigue un enfoque incremental: primero configuramos las depend
   - Verificar que /actuator/prometheus expone métricas de RocksDB con tags apropiados
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 11. Implementar validación de convención de nomenclatura
-  - [ ]* 11.1 Write property test for metric naming convention
+- [x] 11. Implementar validación de convención de nomenclatura
+  - [x]* 11.1 Write property test for metric naming convention
     - **Property 5: Metric Names Follow Micrometer Convention**
     - **Validates: Requirements 12.4, 12.5**
   
-  - [ ]* 11.2 Write unit tests for metric naming validation
+  - [x]* 11.2 Write unit tests for metric naming validation
     - Verificar que todas las métricas registradas siguen la convención
     - Verificar prefijos apropiados (jvm.*, kafka.streams.*, rocksdb.*)
     - _Requirements: 12.4, 12.5_
@@ -168,7 +168,7 @@ La implementación sigue un enfoque incremental: primero configuramos las depend
     - Verificar que el listener continúa procesando otras métricas
     - _Requirements: 13.3, 13.5_
 
-- [ ] 14. Crear documentación de métricas
+- [x] 14. Crear documentación de métricas
   - Crear archivo METRICS.md en .kiro/specs/dynatrace-observability-integration/
   - Documentar todas las métricas de JVM con nombres, tipos, y descripciones
   - Documentar todas las métricas de Kafka Streams con nombres, tipos, tags, y descripciones
@@ -177,7 +177,7 @@ La implementación sigue un enfoque incremental: primero configuramos las depend
   - Incluir recomendaciones de umbrales y alertas para métricas críticas
   - _Requirements: 15.1, 15.2, 15.3, 15.4, 15.5_
 
-- [ ] 15. Crear documentación de arquitectura
+- [x] 15. Crear documentación de arquitectura
   - Crear archivo .arquitectura.md en .kiro/specs/dynatrace-observability-integration/
   - Explicar de forma clara y concisa cada característica implementada
   - Listar todos los archivos involucrados con su propósito
