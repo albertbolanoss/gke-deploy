@@ -47,6 +47,8 @@ management:
       base-path: /actuator
   metrics:
     export:
+      jmx:
+        enabled: true
       prometheus:
         enabled: true
     tags:

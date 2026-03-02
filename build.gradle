@@ -32,6 +32,7 @@ dependencies {
 	// Micrometer dependencies for metrics collection
 	implementation 'io.micrometer:micrometer-core'
 	implementation 'io.micrometer:micrometer-registry-prometheus'
+	implementation 'io.micrometer:micrometer-registry-jmx'
 	
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
