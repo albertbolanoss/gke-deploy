@@ -6,6 +6,10 @@ spring:
   kafka:
     enabled: false
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
+    properties:
+      security.protocol: ${KAFKA_SECURITY_PROTOCOL:PLAINTEXT}
+      sasl.mechanism: ${KAFKA_SASL_MECHANISM:PLAIN}
+      sasl.jaas.config: org.apache.kafka.common.security.plain.PlainLoginModule required username="${KAFKA_SASL_USERNAME:}" password="${KAFKA_SASL_PASSWORD:}";
     streams:
       auto-startup: ${spring.kafka.enabled}
       application-id: ${spring.application.name}
@@ -16,24 +20,6 @@ spring:
       host: ${REDIS_HOST}
       port: 6379
       password: ${REDIS_PASSWORD}
-
-management:
-  health:
-    redis:
-      enabled: false # Disable to test with redis
-  endpoint:
-    health:
-      enabled: true
-      show-details: always
-      probes:
-        enabled: true
-      group:
-        readiness:
-          include: ping #,redis,kafkaHealthCheck
-        liveness:
-          include: ping
-  endpoints:
-    web.exposure.include: health,info
 
 
 health:

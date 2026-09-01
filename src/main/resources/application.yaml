@@ -4,8 +4,12 @@ spring:
   application:
     name: LABS_GKE_DEPLOY
   kafka:
-    enabled: false
+    enabled: true
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
+    properties:
+      security.protocol: ${KAFKA_SECURITY_PROTOCOL:PLAINTEXT}
+      sasl.mechanism: ${KAFKA_SASL_MECHANISM:PLAIN}
+      sasl.jaas.config: org.apache.kafka.common.security.plain.PlainLoginModule required username="${KAFKA_SASL_USERNAME:}" password="${KAFKA_SASL_PASSWORD:}";
     streams:
       auto-startup: ${spring.kafka.enabled}
       application-id: ${spring.application.name}
@@ -20,7 +24,7 @@ spring:
 management:
   health:
     redis:
-      enabled: false # Disable to test with redis
+      enabled: true # Disable to test with redis
   endpoint:
     health:
       enabled: true
@@ -29,9 +33,9 @@ management:
         enabled: true
       group:
         readiness:
-          include: ping #,redis,kafkaHealthCheck
+          include: ping, redis, kafkaHealthCheck
         liveness:
-          include: ping
+          include: ping, redis, kafkaHealthCheck
   endpoints:
     web.exposure.include: health,info
 

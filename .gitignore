@@ -43,5 +43,5 @@ docker/*.jar
 testsmanifests/
 
 
-### Logs ###
-logs/
+### Log ###
+log/
