@@ -23,6 +23,27 @@ docker run -d \
 apache/kafka:latest
 
 docker run -d \
+  --name broker \
+  --network kafka-network \
+  -p 9092:9092 \
+  -e KAFKA_NODE_ID=1 \
+  -e KAFKA_PROCESS_ROLES=broker,controller \
+  -e KAFKA_LISTENERS=INTERNAL://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093 \
+  -e KAFKA_ADVERTISED_LISTENERS=INTERNAL://localhost:9092 \
+  -e KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=INTERNAL:SASL_PLAINTEXT,CONTROLLER:PLAINTEXT \
+  -e KAFKA_INTER_BROKER_LISTENER_NAME=INTERNAL \
+  -e KAFKA_SASL_ENABLED_MECHANISMS=PLAIN \
+  -e KAFKA_SASL_MECHANISM_INTER_BROKER_PROTOCOL=PLAIN \
+  -e KAFKA_CONTROLLER_QUORUM_VOTERS=1@broker:9093 \
+  -e KAFKA_CONTROLLER_LISTENER_NAMES=CONTROLLER \
+  -e KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1 \
+  -e KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=1 \
+  -e KAFKA_TRANSACTION_STATE_LOG_MIN_ISR=1 \
+  -e KAFKA_LISTENER_NAME_INTERNAL_PLAIN_SASL_JAAS_CONFIG='org.apache.kafka.common.security.plain.PlainLoginModule required username="tu_usuario" password="tu_contrasena" user_tu_usuario="tu_contrasena";' \
+  apache/kafka:latest
+
+
+docker run -d \
   --name redis \
   --network kafka-network \
   -p 6379:6379 \
