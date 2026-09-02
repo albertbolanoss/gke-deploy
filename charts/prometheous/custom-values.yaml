@@ -1,0 +1,7 @@
+prometheus:
+  prometheusSpec:
+    additionalScrapeConfigs:
+      - job_name: 'kafka-streams-app'
+        metrics_path: '/actuator/prometheus'
+        static_configs:
+          - targets: ['192.168.59.104:9081']
