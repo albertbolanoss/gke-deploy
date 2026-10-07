@@ -1,0 +1,21 @@
+[
+
+  { 
+    "documentId": "product://1009281", 
+    "operator": "dictionaryPut",
+    "field": "ec_ineligible_flag_dict",
+    "value": { "2150452695": 1, "2150426166": 1 } 
+  },
+  {
+    "documentId": "product://1009281",
+    "operator": "dictionaryRemove",
+    "field": "ec_buying_group_code", 
+    "value": [ "2057190756", "2057213072" ] 
+  },
+  { 
+    "documentId": "product://1009281",
+    "operator": "fieldValueReplace",
+    "field": "pricingoffsetid",
+    "value": "19|1238501677|1790792721860" 
+  }
+]
